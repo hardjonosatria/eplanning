@@ -1,0 +1,1589 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>E-Planning Dinkes - Sistem Usulan Perencanaan</title>
+  
+  <!-- CSS Frameworks -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  
+  <!-- Tom Select CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    
+    .bg-dinkes { background-color: #1e3a8a; }
+    .text-dinkes { color: #1e3a8a; }
+    .status-draft { background-color: #F1F5F9; color: #475569; }
+    .status-koreksi { background-color: #FEF3C7; color: #B45309; }
+    .status-verifikasi { background-color: #FEF08A; color: #854D0E; }
+    .status-disetujui { background-color: #DCFCE7; color: #166534; }
+    
+    body { background-color: #F8FAFC; font-family: 'Inter', sans-serif; }
+    
+    /* Nav Button Styling */
+    .nav-btn {
+      width: 100%; text-align: left; padding: 12px 16px; border-radius: 12px;
+      font-size: 14px; font-weight: 600; transition: all 0.2s; display: flex; align-items: center; margin-bottom: 8px;
+    }
+    .nav-btn.hidden { display: none !important; }
+    .nav-btn.active { background-color: #eff6ff; color: #1e40af; }
+    .nav-btn:not(.active):hover { background-color: #f9fafb; color: #111827; }
+
+    /* Standard Form Input Styling */
+    .form-input, .ts-wrapper .ts-control {
+      width: 100%; border: 1px solid #e2e8f0; border-radius: 0.375rem; padding: 0.6rem 0.8rem;
+      background-color: #F9FAFB; font-size: 0.875rem; transition: all 0.2s; box-shadow: none; color: #1f2937;
+    }
+    .form-input:focus, .ts-wrapper.focus .ts-control {
+      outline: none; border-color: #3b82f6; background-color: #fff; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    .form-input:disabled, .ts-wrapper.disabled .ts-control {
+      background-color: #e5e7eb; color: #6b7280; cursor: not-allowed; opacity: 0.8;
+    }
+
+    .ts-wrapper .ts-control { min-height: 42px; display: flex; align-items: center; }
+    .ts-wrapper.single .ts-control::after { border-color: #9ca3af transparent transparent transparent; }
+    .ts-wrapper { width: 100% !important; }
+
+    /* Perbaikan Z-Index Dropdown agar tidak menutupi Modal yang indexnya 9999 */
+    .ts-dropdown { 
+      border-radius: 0.375rem; 
+      border: 1px solid #e2e8f0; 
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); 
+      z-index: 10050 !important; 
+    }
+    
+    .z-modal { z-index: 9999 !important; }
+    .z-toast { z-index: 10000 !important; }
+
+    .ts-dropdown .option { padding: 0.5rem 0.8rem; font-size: 0.875rem; }
+    .ts-dropdown .option.active { background-color: #eff6ff; color: #1e40af; }
+
+    .label-form { font-size: 0.75rem; font-weight: 700; color: #374151; margin-bottom: 0.25rem; display: block; }
+    .checkbox-custom { width: 1.25rem; height: 1.25rem; border-radius: 0.25rem; border: 2px solid #cbd5e1; cursor: pointer; }
+
+    /* Styling RAB */
+    .rab-paper { background: white; width: 100%; min-height: 210mm; padding: 10mm 15mm; margin: 20px auto; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
+    .rab-excel-table { width: 100%; border-collapse: collapse; font-family: 'Arial', sans-serif; font-size: 11px; }
+    .rab-excel-table th, .rab-excel-table td { border: 1px solid #000; padding: 5px; vertical-align: top; line-height: 1.3; }
+    .rab-header-green th { background-color: #92D050; text-align: center; vertical-align: middle; color: black; font-weight: bold; }
+    .rab-total-blue td { background-color: #00B0F0; font-weight: bold; color: black; }
+
+    /* Sidebar Animation */
+    #sidebar { transition: margin 0.3s ease-in-out; }
+    @media (max-width: 767px) {
+      #sidebar { position: absolute; height: 100%; z-index: 40; margin-left: -16rem; }
+      #sidebar.mobile-open { margin-left: 0; box-shadow: 5px 0 25px rgba(0,0,0,0.2); }
+    }
+    @media (min-width: 768px) { #sidebar.desktop-closed { margin-left: -16rem; } }
+    @media print {
+      @page { size: landscape; margin: 10mm; }
+      body { background: white; overflow: visible !important; height: auto !important; }
+      .no-print { display: none !important; }
+      .rab-paper { box-shadow: none; margin: 0; padding: 0; width: 100%; }
+      main { overflow: visible !important; }
+    }
+  </style>
+</head>
+<body class="flex flex-col h-screen overflow-hidden text-gray-800 antialiased bg-gray-50">
+
+  <!-- ================= VIEW LOGIN ================= -->
+  <div id="loginView" class="fixed inset-0 bg-dinkes flex items-center justify-center z-modal px-4">
+    <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg">
+      <div class="text-center mb-8">
+        <div class="flex justify-center mb-5">
+          <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Lambang_Kabupaten_Banggai_Laut_(2015-sekarang).png" onerror="this.onerror=null; this.src='https://placehold.co/200x200?text=Logo';" alt="Logo Banggai Laut" class="h-28 w-auto drop-shadow-md object-contain">
+        </div>
+        <h2 class="text-lg md:text-xl font-black text-gray-800 tracking-tight uppercase">E-Planning Dinas Kesehatan, Pengendalian Penduduk dan Keluarga Berencana</h2>
+        <p class="text-sm text-gray-500 mt-2 font-medium">Sistem Usulan Perencanaan & Penganggaran</p>
+      </div>
+
+      <form onsubmit="processLogin(event)" class="space-y-5">
+        <div>
+          <label class="label-form text-left text-gray-600">Username</label>
+          <input type="text" id="loginUsername" class="form-input border-gray-300 shadow-sm font-medium" placeholder="Masukkan username..." required>
+        </div>
+        <div>
+          <label class="label-form text-left text-gray-600">Password</label>
+          <input type="password" id="loginPassword" class="form-input border-gray-300 shadow-sm" placeholder="Masukkan password..." required>
+        </div>
+        <button type="submit" id="btnSubmitLogin" class="w-full bg-blue-700 text-white font-bold py-3.5 rounded-xl hover:bg-blue-800 transition shadow-lg mt-4 flex justify-center items-center">
+          <i class="fas fa-sign-in-alt mr-2"></i> Masuk ke Sistem
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= WRAPPER APLIKASI UTAMA ================= -->
+  <div id="appContainer" class="hidden flex-col h-screen w-full flex">
+    
+    <!-- Navigasi Atas -->
+    <nav class="bg-dinkes text-white px-4 md:px-6 py-3 flex justify-between items-center shadow-md no-print z-50 flex-none">
+      <div class="flex items-center space-x-3">
+        <button onclick="toggleSidebar()" class="bg-blue-800 bg-opacity-40 hover:bg-opacity-100 text-white p-2 rounded-lg focus:outline-none transition-all mr-1">
+          <i class="fas fa-bars fa-lg"></i>
+        </button>
+        <div class="hidden sm:block mr-1">
+          <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Lambang_Kabupaten_Banggai_Laut_(2015-sekarang).png" onerror="this.onerror=null; this.src='https://placehold.co/100x100';" alt="Logo" class="h-10 w-auto drop-shadow-sm object-contain bg-white rounded-full p-0.5">
+        </div>
+        <div>
+          <h1 class="font-bold text-xs md:text-sm leading-tight uppercase tracking-tight max-w-[220px] md:max-w-3xl">E-PLANNING DINAS KESEHATAN, PENGENDALIAN PENDUDUK DAN KELUARGA BERENCANA</h1>
+          <p class="text-[8px] md:text-[9px] opacity-80 uppercase tracking-widest font-semibold mt-0.5">Sistem Usulan Perencanaan & Penganggaran</p>
+        </div>
+      </div>
+      
+      <div class="flex items-center space-x-4">
+        <div class="text-right">
+          <p class="text-xs font-bold uppercase text-white tracking-wide" id="displayRole">-</p>
+        </div>
+        <button onclick="logout()" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm" title="Keluar">
+          <i class="fas fa-power-off"></i>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Banner Countdown -->
+    <div id="countdownBanner" class="bg-gray-600 text-white text-center py-1.5 text-xs font-bold w-full transition-colors z-30 relative shadow-sm flex justify-center items-center gap-2 no-print">
+      <div id="tahapanWrapper" class="flex items-center gap-2 hidden">
+        <span><i class="fas fa-flag-checkered mr-1"></i> Tahapan: <span id="displayTahapan" class="text-yellow-300 font-black">MEMUAT...</span></span>
+        <span class="opacity-50">|</span>
+      </div>
+      <span><i class="fas fa-clock mr-1"></i> <span id="displayCountdown">Memeriksa jadwal...</span></span>
+    </div>
+
+    <div class="flex flex-1 overflow-hidden relative">
+      <!-- Sidebar -->
+      <aside id="sidebar" class="w-64 bg-white shadow-sm z-10 flex-none border-r no-print overflow-y-auto">
+        <div class="p-6 space-y-1">
+          <p class="text-[10px] font-black text-gray-400 uppercase mb-5 tracking-widest px-2">Menu Utama</p>
+          <button id="btnNavList" onclick="switchView('listView')" class="nav-btn active">
+            <i class="fas fa-th-large mr-3 opacity-50"></i> Daftar Usulan
+          </button>
+          <button id="btnNavForm" onclick="openHeaderModal()" class="nav-btn">
+            <i class="fas fa-plus-circle mr-3 opacity-50"></i> Buat Usulan Baru
+          </button>
+          <button id="btnNavRab" onclick="switchView('rabView')" class="nav-btn">
+            <i class="fas fa-file-excel mr-3 opacity-50 text-green-600"></i> Format RAB
+          </button>
+          
+          <div id="adminMenuSection" class="pt-6 mt-4 border-t border-gray-100 hidden">
+            <p class="text-[10px] font-black text-blue-400 uppercase mb-4 tracking-widest px-2">Khusus Admin</p>
+            <button id="btnNavPengaturan" onclick="switchView('pengaturanView')" class="nav-btn">
+              <i class="fas fa-calendar-alt mr-3 opacity-50 text-blue-600"></i> Pengaturan Jadwal
+            </button>
+            <button id="btnNavUser" onclick="switchView('userView')" class="nav-btn">
+              <i class="fas fa-users mr-3 opacity-50 text-purple-600"></i> Manajemen User
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Konten Utama -->
+      <main class="flex-1 overflow-y-auto bg-gray-50 relative pb-24">
+        
+        <!-- ================= LIST VIEW: DAFTAR USULAN ================= -->
+        <div id="listView" class="p-4 md:p-10 space-y-6">
+          <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h2 class="text-xl font-bold text-slate-800">Daftar Usulan Perencanaan</h2>
+              <p class="text-xs text-gray-500 font-medium" id="displayTahunAnggaranList">Tahun Anggaran 2026</p>
+            </div>
+            <div class="flex space-x-2" id="bidangActionButtons">
+              <button onclick="kirimUsulan()" class="bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-700 transition flex items-center shadow-sm">
+                <i class="fas fa-paper-plane mr-2"></i> Kirim Usulan
+              </button>
+              <button onclick="openHeaderModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 transition flex items-center shadow-sm">
+                <i class="fas fa-plus mr-2"></i> Usulan Baru
+              </button>
+            </div>
+          </div>
+
+          <!-- Dashboards -->
+          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 no-print">
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex items-center gap-4 transition-transform hover:-translate-y-1">
+              <div class="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 flex-shrink-0">
+                <i class="fas fa-file-alt fa-lg"></i>
+              </div>
+              <div>
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Total Usulan</p>
+                <h3 class="text-2xl font-black text-slate-800 mt-0.5 leading-none" id="dashTotalUsulan">0</h3>
+              </div>
+            </div>
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex items-center gap-4 transition-transform hover:-translate-y-1">
+              <div class="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center text-green-600 flex-shrink-0">
+                <i class="fas fa-money-bill-wave fa-lg"></i>
+              </div>
+              <div class="overflow-hidden">
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Total Anggaran</p>
+                <h3 class="text-lg font-black text-slate-800 mt-0.5 leading-tight truncate" id="dashTotalAnggaran">Rp 0</h3>
+              </div>
+            </div>
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex items-center gap-4 transition-transform hover:-translate-y-1">
+              <div class="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 flex-shrink-0">
+                <i class="fas fa-check-circle fa-lg"></i>
+              </div>
+              <div>
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Telah Disetujui</p>
+                <h3 class="text-2xl font-black text-slate-800 mt-0.5 leading-none" id="dashDisetujui">0</h3>
+              </div>
+            </div>
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex items-center gap-4 transition-transform hover:-translate-y-1">
+              <div class="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center text-orange-600 flex-shrink-0">
+                <i class="fas fa-clock fa-lg"></i>
+              </div>
+              <div>
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Dalam Proses</p>
+                <h3 class="text-2xl font-black text-slate-800 mt-0.5 leading-none" id="dashProses">0</h3>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabel Usulan -->
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm whitespace-nowrap md:whitespace-normal">
+                <thead class="bg-gray-50 text-gray-400 font-bold border-b text-[10px] uppercase tracking-wider">
+                  <tr>
+                    <th class="px-6 py-4 text-left w-24">Status</th>
+                    <th class="px-6 py-4 text-left">Bidang</th>
+                    <th class="px-6 py-4 text-left w-1/3">Sub-Kegiatan</th>
+                    <th class="px-6 py-4 text-right">Total Anggaran</th>
+                    <th class="px-6 py-4 text-center">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="tableBody" class="divide-y divide-gray-100">
+                  <!-- Data Tabel Dimuat Disini -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= HALAMAN VERIFIKASI ADMIN ================= -->
+        <div id="verifikasiView" class="hidden p-4 md:p-10 space-y-6">
+            <!-- Isi Verifikasi Tetap Sama -->
+            <div class="max-w-6xl mx-auto space-y-6">
+                <!-- Header Info -->
+                <div class="flex items-center justify-between no-print">
+                    <button onclick="switchView('listView')" class="text-gray-500 hover:text-gray-800 font-bold text-sm transition flex items-center bg-white px-4 py-2 rounded-lg border shadow-sm">
+                        <i class="fas fa-arrow-left mr-2"></i> Kembali
+                    </button>
+                    <div class="bg-yellow-100 text-yellow-800 px-4 py-2 rounded-lg text-sm font-bold shadow-sm border border-yellow-200">
+                        <i class="fas fa-clipboard-check mr-2"></i> Mode Verifikasi Admin
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 bg-blue-600 text-white px-6 py-2 rounded-bl-2xl font-black text-sm shadow-md">
+                        <span id="verifTotalAnggaran">Rp 0</span>
+                    </div>
+                    <h2 class="text-xl font-black text-slate-800 mb-1" id="verifSubKegiatan">Nama Sub Kegiatan</h2>
+                    <p class="text-sm font-bold text-blue-600 mb-6 uppercase tracking-wide" id="verifBidang">Nama Bidang</p>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm border-t border-gray-100 pt-4">
+                        <div><p class="text-gray-500 text-xs font-bold mb-1">Target Output</p><p class="font-semibold text-gray-800" id="verifTarget">-</p></div>
+                        <div><p class="text-gray-500 text-xs font-bold mb-1">ID Usulan</p><p class="font-mono text-xs text-gray-600 mt-1" id="verifId">-</p></div>
+                        <div><p class="text-gray-500 text-xs font-bold mb-1">Progress Review</p>
+                            <div class="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                                <div class="bg-blue-600 h-2.5 rounded-full" id="verifProgressBar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table Rincian Checklist -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="bg-gray-50 p-4 border-b flex flex-wrap gap-3 items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="checkAllVerif" onclick="toggleAllVerif(this)" class="checkbox-custom ml-2">
+                            <label for="checkAllVerif" class="text-sm font-bold text-gray-700 cursor-pointer select-none">Pilih Semua</label>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="setBulkStatus('DISETUJUI')" class="bg-green-100 text-green-700 border border-green-300 px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-200 transition">
+                                <i class="fas fa-check mr-1"></i> Setujui Terpilih
+                            </button>
+                            <button onclick="setBulkStatus('KOREKSI')" class="bg-red-100 text-red-700 border border-red-300 px-4 py-2 rounded-lg text-xs font-bold hover:bg-red-200 transition">
+                                <i class="fas fa-times mr-1"></i> Koreksi Terpilih
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-gray-50 text-gray-500 text-xs uppercase font-bold border-b">
+                                <tr>
+                                    <th class="p-4 w-12 text-center">#</th>
+                                    <th class="p-4 w-64">Rincian Komponen</th>
+                                    <th class="p-4 text-center">Vol & Harga</th>
+                                    <th class="p-4 text-right">Sub Total</th>
+                                    <th class="p-4 text-center w-36">Status Item</th>
+                                    <th class="p-4">Catatan Admin</th>
+                                </tr>
+                            </thead>
+                            <tbody id="verifTableBody" class="divide-y divide-gray-100">
+                                <!-- JS Generated -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200 flex flex-col md:flex-row items-center justify-between sticky bottom-6 z-40">
+                    <div class="mb-4 md:mb-0">
+                        <h3 class="font-bold text-gray-800">Selesaikan Verifikasi</h3>
+                        <p class="text-xs text-gray-500">Pastikan semua item telah direview (Disetujui/Koreksi) sebelum mengirim.</p>
+                    </div>
+                    <button onclick="simpanHasilVerifikasi()" class="w-full md:w-auto bg-blue-700 text-white px-8 py-3 rounded-xl font-bold shadow-md hover:bg-blue-800 transition flex items-center justify-center">
+                        <i class="fas fa-paper-plane mr-2"></i> Kirim Hasil Verifikasi
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= NEW RINCIAN VIEW: DAFTAR RINCIAN (PENGGANTI FORM PANJANG) ================= -->
+        <div id="rincianView" class="hidden p-4 md:p-10 space-y-6">
+          <div class="max-w-6xl mx-auto space-y-6">
+            
+            <!-- Aksi Atas -->
+            <div class="flex items-center justify-between no-print gap-4 flex-wrap">
+              <button onclick="switchView('listView')" class="text-gray-500 hover:text-gray-800 font-bold text-sm transition bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm flex items-center">
+                <i class="fas fa-arrow-left mr-2"></i> Kembali
+              </button>
+              <div class="flex space-x-2" id="rincianActionButtons">
+                <button onclick="openRincianModal('NEW')" id="btnTambahRincian" class="bg-blue-600 text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-blue-700 transition shadow-sm flex items-center">
+                  <i class="fas fa-plus mr-2"></i> Tambah Rincian
+                </button>
+              </div>
+            </div>
+
+            <!-- Header Info -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 relative overflow-hidden">
+               <div class="absolute top-0 right-0 px-4 py-2 text-white font-bold text-[10px] tracking-widest uppercase rounded-bl-xl" id="rincianViewStatusBadge">DRAFT</div>
+               <h2 class="text-xl font-black text-slate-800 mb-2 w-11/12" id="rincianViewTitle">Nama Sub Kegiatan</h2>
+               <div class="flex flex-wrap items-center text-sm gap-4 text-gray-600 mb-4 border-b pb-4">
+                  <div><span class="font-bold text-xs uppercase text-gray-400 block mb-0.5">Indikator</span> <span id="rincianViewIndikator" class="font-medium">-</span></div>
+                  <div><span class="font-bold text-xs uppercase text-gray-400 block mb-0.5">Target Output</span> <span id="rincianViewTarget" class="font-medium font-mono bg-gray-100 px-2 py-0.5 rounded">-</span></div>
+               </div>
+               <div>
+                  <span class="font-bold text-xs uppercase text-gray-400 block mb-1">Total Estimasi Anggaran Usulan</span>
+                  <div class="text-2xl font-black text-blue-700" id="rincianViewTotal">Rp 0</div>
+               </div>
+            </div>
+
+            <!-- Tabel Daftar Rincian -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+               <div class="overflow-x-auto">
+                 <table class="w-full text-sm text-left">
+                    <thead class="bg-gray-50 text-gray-500 text-[10px] uppercase font-bold border-b tracking-wider">
+                       <tr>
+                          <th class="p-4 w-12 text-center">#</th>
+                          <th class="p-4 w-80">Rincian Rencana Belanja</th>
+                          <th class="p-4 text-center w-32">Koefisien</th>
+                          <th class="p-4 text-right w-36">Harga</th>
+                          <th class="p-4 text-right w-40">Sub Total</th>
+                          <th class="p-4 text-center w-28">Aksi</th>
+                       </tr>
+                    </thead>
+                    <tbody id="rincianTableBody" class="divide-y divide-gray-100 bg-white">
+                       <!-- Data Rendered by JS -->
+                    </tbody>
+                 </table>
+               </div>
+            </div>
+
+            <!-- Tombol Simpan Final -->
+            <div class="flex justify-end pt-4" id="rincianSaveWrapper">
+               <button onclick="saveUsulanKeDatabase()" class="bg-blue-800 text-white px-8 py-3 rounded-xl text-sm font-bold shadow-md hover:bg-blue-900 transition flex items-center">
+                 <i class="fas fa-save mr-2"></i> Simpan Draft Usulan
+               </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- User Management -->
+        <div id="userView" class="hidden p-4 md:p-10 space-y-6">
+          <div class="max-w-4xl mx-auto space-y-6">
+            <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100">
+              <div class="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
+                  <div>
+                      <h2 class="text-xl font-bold text-slate-800"><i class="fas fa-users-cog text-purple-600 mr-2"></i> Manajemen User</h2>
+                      <p class="text-sm text-gray-500 mt-1">Kelola akun akses untuk tiap bidang.</p>
+                  </div>
+                  <button onclick="openUserModal()" class="bg-purple-600 text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-purple-700 transition shadow-sm whitespace-nowrap">
+                      <i class="fas fa-plus mr-2"></i> Tambah User
+                  </button>
+              </div>
+              <div class="overflow-x-auto border border-gray-100 rounded-xl">
+                <table class="w-full text-left text-sm whitespace-nowrap">
+                  <thead class="bg-gray-50 border-b border-gray-100 text-gray-500 font-bold">
+                    <tr><th class="p-4">Username</th><th class="p-4">Password</th><th class="p-4">Bidang (Akses)</th><th class="p-4 text-center">Aksi</th></tr>
+                  </thead>
+                  <tbody id="userTableBody" class="divide-y divide-gray-100 bg-white"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= PENGATURAN VIEW ================= -->
+        <div id="pengaturanView" class="hidden p-4 md:p-10 space-y-6">
+          <div class="max-w-2xl mx-auto space-y-6">
+            <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100">
+              <h2 class="text-xl font-bold text-slate-800 mb-2"><i class="fas fa-calendar-check text-blue-600 mr-2"></i> Pengaturan Jadwal & Tahapan</h2>
+              <p class="text-sm text-gray-500 mb-6 border-b pb-4">Atur tahapan anggaran yang aktif dan batas waktu input usulan. <br><b class="text-red-500"><i class="fas fa-lock mr-1"></i>Jadwal yang sedang berjalan akan dikunci.</b></p>
+              
+              <div class="space-y-5">
+                <div>
+                  <label class="label-form">Tahun Anggaran Perencanaan <span class="text-red-500">*</span></label>
+                  <input type="number" id="inputTahunAnggaran" class="form-input transition-colors font-bold text-blue-700" placeholder="Misal: 2026">
+                </div>
+
+                <div>
+                  <label class="label-form">Tahapan Anggaran Aktif <span class="text-red-500">*</span></label>
+                  <select id="inputTahapan" placeholder="Pilih atau Ketik Tahapan Baru..."></select>
+                </div>
+
+                <div>
+                  <label class="label-form">Batas Waktu (Deadline) Input <span class="text-red-500">*</span></label>
+                  <input type="datetime-local" id="inputDeadline" class="form-input transition-colors">
+                </div>
+
+                <div class="pt-4 flex justify-end space-x-3">
+                  <button id="btnHentikanTimer" onclick="hentikanTimer()" class="hidden bg-gray-100 text-red-600 px-6 py-2.5 rounded-lg text-sm font-bold hover:bg-red-50 border border-transparent transition shadow-sm">
+                    <i class="fas fa-stop-circle mr-2"></i> Hentikan Jadwal Aktif
+                  </button>
+                  <button id="btnSimpanPengaturan" onclick="simpanPengaturan()" class="bg-blue-600 text-white px-6 py-2.5 rounded-lg text-sm font-bold hover:bg-blue-700 transition shadow-sm">
+                    <i class="fas fa-save mr-2"></i> Simpan & Mulai Jadwal
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RAB View -->
+        <div id="rabView" class="hidden min-h-screen p-4 md:p-10">
+          <div id="rabAdminControl" class="max-w-5xl mx-auto bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-200 mb-6 flex flex-col md:flex-row items-center justify-between gap-4 no-print hidden">
+            <div class="flex flex-col md:flex-row md:items-center w-full gap-3">
+              <label class="font-bold text-sm text-gray-700 whitespace-nowrap"><i class="fas fa-filter text-blue-500 mr-2"></i>Filter RAB Bidang:</label>
+              <select id="selectRabBidang" onchange="generateRab()" class="form-input w-full md:w-64 text-sm font-semibold text-blue-900"><option value="ALL">Semua Bidang</option></select>
+            </div>
+            <div class="flex gap-2 w-full md:w-auto mt-3 md:mt-0">
+              <button onclick="exportToExcel()" class="bg-green-600 text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-green-700 transition flex items-center shadow-sm justify-center"><i class="fas fa-file-excel mr-2"></i> Excel</button>
+              <button onclick="window.print()" class="bg-blue-800 text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-blue-900 transition flex items-center shadow-sm justify-center"><i class="fas fa-print mr-2"></i> Cetak</button>
+            </div>
+          </div>
+
+          <div id="rabBidangControl" class="max-w-5xl mx-auto flex justify-end gap-2 mb-4 no-print hidden">
+              <button onclick="exportToExcel()" class="bg-green-600 text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-green-700 transition flex items-center shadow-sm"><i class="fas fa-file-excel mr-2"></i> Excel</button>
+              <button onclick="window.print()" class="bg-blue-800 text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-blue-900 transition flex items-center shadow-sm"><i class="fas fa-print mr-2"></i> Cetak</button>
+          </div>
+
+          <div class="rab-paper overflow-x-auto relative">
+             <div class="text-center mb-6 font-bold uppercase tracking-wide leading-tight" style="font-family: Arial, sans-serif;">
+               <div class="text-lg mb-1">RENCANA ANGGARAN BIAYA (RAB)</div>
+               <div class="text-sm mb-1" id="rabSumberDanaTitle">TAHAPAN T.A. 2026</div>
+               <div class="text-sm" id="rabUnitKerjaDisplay">SUB BAGIAN PERENCANAAN</div>
+             </div>
+             <table id="exportRabTable" class="rab-excel-table min-w-[1200px]">
+               <thead class="rab-header-green">
+                 <tr>
+                     <th rowspan="2" class="w-12">NO</th><th rowspan="2" class="w-40">KEGIATAN</th><th colspan="2">KOMPONEN PEMBIAYAAN</th>
+                     <th rowspan="2" class="w-48">URAIAN KOMPONEN</th>
+                     <th rowspan="2" class="w-16">VOL</th><th rowspan="2" class="w-16">SATUAN</th><th rowspan="2" class="w-48">RINCIAN KOEFISIEN</th>
+                     <th rowspan="2" class="w-24">HARGA SATUAN</th><th rowspan="2" class="w-24">SUB TOTAL</th><th rowspan="2" class="w-28">JUMLAH TOTAL</th>
+                     <th rowspan="2" class="w-40">SUB KEGIATAN</th><th rowspan="2" class="w-32">SUMBER DANA</th><th rowspan="2" class="w-48">INDIKATOR</th><th rowspan="2" class="w-16">TARGET</th><th rowspan="2" class="w-20">SATUAN</th>
+                 </tr>
+                 <tr><th class="w-48">REKENING</th><th class="w-32">DETAIL</th></tr>
+                 <tr class="rab-total-blue"><td colspan="10" class="text-left px-2">Jumlah total usulan anggaran</td><td class="text-right px-2" id="rabGrandTotal">Rp 0</td><td colspan="5"></td></tr>
+               </thead>
+               <tbody id="rabBody"></tbody>
+             </table>
+             <div class="mt-12 flex justify-end text-center text-xs mr-10" style="font-family: Arial, sans-serif;">
+                <div><p class="mb-16">Mengetahui<br>Kepala <span id="rabSignText">Sub Bagian Perencanaan</span></p><p class="font-bold underline">NAMA PEJABAT TERKAIT</p><p>NIP. ........................................</p></div>
+             </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- ================= MODALS ================= -->
+
+  <!-- MODAL 1: BUAT/EDIT HEADER USULAN -->
+  <div id="headerModal" class="fixed inset-0 bg-gray-900 bg-opacity-60 z-modal hidden flex items-center justify-center px-4 no-print transition-opacity" style="backdrop-filter: blur(4px);">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+        <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-folder-plus text-blue-600 mr-2"></i> Data Identitas Usulan (Header)</h3>
+        <button onclick="closeHeaderModal()" class="text-gray-400 hover:text-red-500 transition focus:outline-none bg-white rounded-full p-2 hover:bg-red-50"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="p-6 space-y-5 bg-white">
+         <div>
+            <label class="label-form">Sub Kegiatan <span class="text-red-500">*</span></label>
+            <select id="selectSubKegiatan" placeholder="-- Pilih atau Cari Sub Kegiatan --"><option value="">-- Memuat Data... --</option></select>
+         </div>
+         <div>
+            <label class="label-form">Indikator</label>
+            <textarea id="inputIndikator" class="form-input bg-gray-100 text-sm" rows="2" readonly placeholder="Otomatis terisi berdasarkan Sub Kegiatan..."></textarea>
+         </div>
+         <div class="grid grid-cols-2 gap-4">
+            <div>
+               <label class="label-form">Target Output <span class="text-red-500">*</span></label>
+               <input type="number" id="inputTarget" class="form-input font-bold text-blue-700" placeholder="Angka Target">
+            </div>
+            <div>
+               <label class="label-form">Satuan Target</label>
+               <input type="text" id="inputTargetSatuan" class="form-input bg-gray-100" readonly placeholder="Otomatis...">
+            </div>
+         </div>
+      </div>
+      <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end space-x-3">
+        <button onclick="closeHeaderModal()" class="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-300 transition shadow-sm">Batal</button>
+        <button onclick="lanjutKeRincian()" class="px-6 py-2.5 bg-blue-700 text-white rounded-xl text-sm font-bold hover:bg-blue-800 transition shadow-sm flex items-center">Lanjut Isi Rincian <i class="fas fa-arrow-right ml-2"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: FORM INPUT/EDIT RINCIAN BELANJA -->
+  <div id="rincianModal" class="fixed inset-0 bg-gray-900 bg-opacity-60 z-modal hidden flex items-center justify-center px-4 no-print transition-opacity" style="backdrop-filter: blur(4px);">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] flex flex-col overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+        <h3 class="text-lg font-bold text-gray-800" id="rincianModalTitle"><i class="fas fa-edit text-blue-600 mr-2"></i> Form Rincian Belanja</h3>
+        <button onclick="closeRincianModal()" class="text-gray-400 hover:text-red-500 transition focus:outline-none bg-white rounded-full p-2 hover:bg-red-50"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="p-6 overflow-y-auto flex-1 bg-white space-y-5">
+         
+         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+               <label class="label-form">Sumber Dana <span class="text-red-500">*</span></label>
+               <select id="selectSumberDana" placeholder="-- Pilih Sumber Dana --"><option value="">-- Memuat Data... --</option></select>
+            </div>
+            <div>
+               <label class="label-form">Kode & Nama Rekening <span class="text-red-500">*</span></label>
+               <select id="selectRekening" placeholder="-- Pilih Rekening Belanja --"><option value="">-- Memuat Data... --</option></select>
+            </div>
+         </div>
+
+         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+               <label class="label-form">Nama Komponen (Kegiatan) <span class="text-red-500">*</span></label>
+               <input type="text" id="inputKomponen" class="form-input" placeholder="Misal: Kertas HVS / Honorarium">
+            </div>
+            <div>
+               <label class="label-form">Spesifikasi</label>
+               <input type="text" id="inputSpesifikasi" class="form-input" placeholder="Misal: A4 80gr / per hari">
+            </div>
+         </div>
+
+         <div>
+            <label class="label-form">Keterangan Kegiatan</label>
+            <input type="text" id="inputKeterangan" class="form-input" placeholder="Misal: Rapat kordinasi bulanan...">
+         </div>
+
+         <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+            <label class="label-form mb-3">Koefisien / Volume <span class="text-red-500">*</span></label>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+               <div class="flex space-x-1"><input type="number" id="jml1" oninput="calculateSubTotal()" class="form-input w-1/3 text-center px-1" placeholder="Jml"><div class="w-2/3"><select id="sat1" placeholder="Satuan"></select></div></div>
+               <div class="flex space-x-1"><input type="number" id="jml2" oninput="calculateSubTotal()" class="form-input w-1/3 text-center px-1" placeholder="Jml"><div class="w-2/3"><select id="sat2" placeholder="Satuan"></select></div></div>
+               <div class="flex space-x-1"><input type="number" id="jml3" oninput="calculateSubTotal()" class="form-input w-1/3 text-center px-1" placeholder="Jml"><div class="w-2/3"><select id="sat3" placeholder="Satuan"></select></div></div>
+               <div class="flex space-x-1"><input type="number" id="jml4" oninput="calculateSubTotal()" class="form-input w-1/3 text-center px-1" placeholder="Jml"><div class="w-2/3"><select id="sat4" placeholder="Satuan"></select></div></div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-5 items-end">
+               <div>
+                  <label class="label-form">Harga Satuan (Rp) <span class="text-red-500">*</span></label>
+                  <input type="number" id="hargaSatuan" oninput="calculateSubTotal()" class="form-input font-bold" placeholder="Harga Satuan">
+               </div>
+               <div>
+                  <label class="label-form text-gray-500">Sub Total Estimasi (Rp)</label>
+                  <div id="displaySubTotal" class="form-input bg-gray-100 font-black text-blue-800 text-lg">Rp 0</div>
+               </div>
+            </div>
+         </div>
+
+      </div>
+      <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end space-x-3">
+        <button onclick="closeRincianModal()" class="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-300 transition shadow-sm" id="btnBatalRincian">Batal</button>
+        <button onclick="simpanRincianItem()" class="px-6 py-2.5 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 transition shadow-sm flex items-center" id="btnSimpanRincian">
+           <i class="fas fa-check mr-2"></i> Simpan Item
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Modal User -->
+  <div id="userModal" class="fixed inset-0 bg-black bg-opacity-50 z-modal hidden flex items-center justify-center px-4 no-print">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+      <h3 id="userModalTitle" class="text-lg font-bold text-gray-800 mb-4 border-b pb-3">Tambah User</h3>
+      <div class="space-y-4">
+        <div><label class="label-form">Username</label><input type="text" id="formUsername" class="form-input"></div>
+        <div><label class="label-form">Password</label><input type="text" id="formPassword" class="form-input"></div>
+        <div><label class="label-form">Akses Bidang</label><select id="formBidang" class="form-input"><option value="">-- Pilih --</option><option value="Admin Verifikator">Admin Verifikator</option></select></div>
+      </div>
+      <div class="flex justify-end mt-8 space-x-3">
+        <button onclick="closeUserModal()" class="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-bold hover:bg-gray-200">Batal</button>
+        <button onclick="submitUser()" class="px-5 py-2.5 bg-purple-600 text-white rounded-lg text-sm font-bold hover:bg-purple-700 shadow-sm">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Alerts/Confirmation -->
+  <div id="logoutModal" class="fixed inset-0 bg-gray-900 bg-opacity-60 z-modal hidden flex items-center justify-center px-4 no-print" style="backdrop-filter: blur(6px);">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 text-center">
+      <div class="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-5 text-red-500 border-4 border-white"><i class="fas fa-sign-out-alt fa-3x"></i></div>
+      <h3 class="text-2xl font-bold text-gray-800 mb-2">Konfirmasi Logout</h3>
+      <p class="text-gray-500 mb-8 font-medium">Apakah Anda yakin ingin keluar?</p>
+      <div class="flex justify-center space-x-4">
+        <button onclick="closeLogoutModal()" class="px-6 py-3 bg-white border-2 border-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-50 w-full">Batal</button>
+        <button onclick="confirmLogout()" class="px-6 py-3 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 w-full">Ya, Keluar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="deleteModal" class="fixed inset-0 bg-gray-900 bg-opacity-60 z-modal hidden flex items-center justify-center px-4 no-print" style="backdrop-filter: blur(6px);">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 text-center">
+      <div class="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-5 text-red-500 border-4 border-white"><i class="fas fa-trash-alt fa-3x"></i></div>
+      <h3 class="text-2xl font-bold text-gray-800 mb-2">Hapus Usulan?</h3>
+      <p class="text-gray-500 mb-8 font-medium text-sm">Usulan ini akan dihapus permanen.</p>
+      <div class="flex justify-center space-x-4">
+        <button onclick="closeDeleteModal()" class="px-6 py-3 bg-white border-2 border-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-50 w-full">Batal</button>
+        <button onclick="confirmDeleteProposal()" class="px-6 py-3 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 w-full">Ya, Hapus</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="kirimModal" class="fixed inset-0 bg-gray-900 bg-opacity-60 z-modal hidden flex items-center justify-center px-4 no-print" style="backdrop-filter: blur(6px);">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 text-center">
+      <div class="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-5 text-green-500 border-4 border-white"><i class="fas fa-paper-plane fa-3x"></i></div>
+      <h3 class="text-2xl font-bold text-gray-800 mb-2">Kirim Usulan?</h3>
+      <p class="text-gray-500 mb-8 font-medium text-sm" id="kirimModalText">Apakah Anda yakin ingin mengirim usulan ini untuk diverifikasi?</p>
+      <div class="flex justify-center space-x-4">
+        <button onclick="closeKirimModal()" class="px-6 py-3 bg-white border-2 border-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-50 w-full">Batal</button>
+        <button onclick="confirmKirimUsulan()" class="px-6 py-3 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 w-full">Ya, Kirim</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="alertModal" class="fixed inset-0 bg-gray-900 bg-opacity-60 z-modal hidden flex items-center justify-center px-4 no-print" style="backdrop-filter: blur(6px);">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 text-center">
+      <div class="w-20 h-20 bg-yellow-50 rounded-full flex items-center justify-center mx-auto mb-5 text-yellow-500 border-4 border-white shadow-sm"><i class="fas fa-lock fa-3x"></i></div>
+      <h3 class="text-2xl font-bold text-gray-800 mb-2" id="alertModalTitle">Akses Terkunci</h3>
+      <p class="text-gray-500 mb-8 font-medium text-sm leading-relaxed" id="alertModalMessage">Pesan.</p>
+      <div class="flex justify-center"><button onclick="closeAlertModal()" class="px-6 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 w-full">Mengerti</button></div>
+    </div>
+  </div>
+
+  <div id="toastContainer" class="fixed bottom-6 right-6 z-toast flex flex-col gap-3 pointer-events-none no-print"></div>
+
+  <!-- Tom Select JS -->
+  <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+
+  <script>
+    // Global State
+    const bidangList = ["Dalduk", "KB dan KS", "Keuangan dan Aset", "P2P", "Perencanaan", "Umum Kepegawaian dan Hukum", "Yankesmas dan Farmalkes"];
+    let currentRole = ""; 
+    
+    // Proposal State
+    let currentHeaderInfo = {}; // Menyimpan data header usulan yang sedang aktif
+    let tempRincian = []; // Menyimpan rincian usulan aktif
+    let editingDraftId = null; 
+    let editingRincianIndex = null; // Menyimpan index rincian yang sedang diedit (-1 berarti tambah baru)
+    let proposalToDeleteId = null;
+    
+    // DB State
+    let allData = [];     
+    let allRincian = [];  
+    let allRekening = []; 
+    let currentVerifikasiId = null;
+    let verifikasiItems = [];
+
+    // Schedule State
+    let sistemTahunAnggaran = new Date().getFullYear() + 1;
+    let sistemTahapan = "APBD Murni";
+    let sistemDeadline = "";
+    let countdownInterval = null;
+    let isScheduleActive = false; 
+
+    // Session State
+    const SESSION_TIMEOUT = 30 * 60 * 1000; 
+    let sessionCheckInterval = null;
+    let userData = [];
+    let editingUserOldUsername = null;
+    
+    // Tom Select Instance
+    let tsTahapan = null, tsSubKegiatan = null, tsSumberDana = null, tsRekening = null;
+    let tsSatuan = [null, null, null, null];
+    let defaultTahapanList = ["APBD Murni", "Pergeseran 1", "Pergeseran 2", "APBD Perubahan"];
+
+    const formatRp = (angka) => "Rp " + Math.round(angka).toLocaleString('id-ID');
+
+    // UTILS
+    function showModalNotif(title, msg) {
+        document.getElementById('alertModalTitle').innerText = title;
+        document.getElementById('alertModalMessage').innerText = msg;
+        document.getElementById('alertModal').classList.remove('hidden');
+    }
+    function closeAlertModal() { document.getElementById('alertModal').classList.add('hidden'); }
+
+    // FUNGSI BARU: Menutup semua modal yang aktif (mencegah modal mengambang saat logout/sesi habis)
+    function closeAllModals() {
+        const modalIds = ['headerModal', 'rincianModal', 'userModal', 'logoutModal', 'deleteModal', 'kirimModal', 'alertModal'];
+        modalIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.add('hidden');
+        });
+    }
+
+    function showToast(msg, type = 'success') {
+      const c = document.getElementById('toastContainer'); const t = document.createElement('div');
+      t.className = `${type === 'error' ? 'bg-red-500' : 'bg-green-600'} text-white px-5 py-3 rounded-xl shadow-2xl flex items-center transition-all duration-300 transform translate-y-10 opacity-0`;
+      t.innerHTML = `<i class="fas ${type === 'error' ? 'fa-exclamation-circle' : 'fa-check-circle'} mr-3"></i><span class="text-sm font-bold">${msg}</span>`;
+      c.appendChild(t);
+      setTimeout(() => t.classList.remove('translate-y-10', 'opacity-0'), 10);
+      setTimeout(() => { t.classList.add('translate-y-10', 'opacity-0'); setTimeout(() => t.remove(), 300); }, 3000);
+    }
+
+    // MANAJEMEN USER (tetap sama)
+    function initUserForm() {
+        const select = document.getElementById('formBidang'); if (!select) return;
+        bidangList.forEach(b => { const opt = document.createElement('option'); opt.value = b; opt.text = b; select.appendChild(opt); });
+    }
+    function fetchUsers() {
+        const tbody = document.getElementById('userTableBody'); if (!tbody) return;
+        tbody.innerHTML = '<tr><td colspan="4" class="p-6 text-center italic text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i> Memuat...</td></tr>';
+        if (typeof google !== 'undefined' && google.script) {
+            google.script.run
+                .withSuccessHandler(data => { userData = data || []; renderUserTable(); })
+                .withFailureHandler(err => { showToast("Gagal memuat user: " + err.message, "error"); })
+                .getUsers();
+        }
+    }
+    function renderUserTable() {
+        const tbody = document.getElementById('userTableBody'); if (!tbody) return;
+        tbody.innerHTML = userData.map(u => `
+            <tr class="hover:bg-purple-50 transition">
+                <td class="p-4 font-semibold text-gray-800">${u.username}</td>
+                <td class="p-4 text-gray-500 font-mono text-xs">${u.password}</td>
+                <td class="p-4"><span class="bg-purple-100 text-purple-700 px-3 py-1.5 rounded-lg text-xs font-bold">${u.bidang}</span></td>
+                <td class="p-4 text-center">
+                    <button onclick="editUser('${u.username}')" class="text-blue-500 mr-3"><i class="fas fa-edit"></i></button>
+                    <button onclick="deleteUser('${u.username}')" class="text-red-500"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>`).join('');
+    }
+    function openUserModal() {
+        editingUserOldUsername = null; document.getElementById('userModalTitle').innerText = "Tambah User";
+        ['formUsername','formPassword','formBidang'].forEach(id => document.getElementById(id).value = "");
+        document.getElementById('userModal').classList.remove('hidden');
+    }
+    function editUser(username) {
+        const u = userData.find(x => x.username === username); if(!u) return;
+        editingUserOldUsername = username; document.getElementById('userModalTitle').innerText = "Edit User";
+        document.getElementById('formUsername').value = u.username; document.getElementById('formPassword').value = u.password; document.getElementById('formBidang').value = u.bidang;
+        document.getElementById('userModal').classList.remove('hidden');
+    }
+    function closeUserModal() { document.getElementById('userModal').classList.add('hidden'); }
+    function submitUser() {
+        const u = document.getElementById('formUsername').value.trim(), p = document.getElementById('formPassword').value.trim(), b = document.getElementById('formBidang').value;
+        if(!u || !p || !b) return showToast("Lengkapi data!", "error");
+        if (typeof google !== 'undefined' && google.script) {
+            google.script.run
+                .withSuccessHandler(res => { showToast(res.message); fetchUsers(); closeUserModal(); })
+                .withFailureHandler(err => { showToast("Gagal menyimpan user: " + err.message, "error"); })
+                .saveUser(editingUserOldUsername, u, p, b);
+        }
+    }
+    function deleteUser(username) {
+        if(!confirm("Hapus user " + username + "?")) return;
+        if (typeof google !== 'undefined' && google.script) {
+            google.script.run
+                .withSuccessHandler(res => { showToast(res.message); fetchUsers(); })
+                .withFailureHandler(err => { showToast("Gagal menghapus user: " + err.message, "error"); })
+                .deleteUser(username);
+        }
+    }
+
+    // JADWAL & COUNTDOWN (tetap sama)
+    function setupTahapanDropdown() {
+        const sel = document.getElementById('inputTahapan'); if (tsTahapan) tsTahapan.destroy();
+        sel.innerHTML = '<option value="">-- Pilih atau Ketik Baru --</option>';
+        defaultTahapanList.forEach(t => { const opt = document.createElement('option'); opt.value = t; opt.text = t; sel.appendChild(opt); });
+        tsTahapan = new TomSelect(sel, { create: true, placeholder: "Pilih jadwal..." });
+        if(sistemTahapan) tsTahapan.setValue(sistemTahapan);
+    }
+    function togglePengaturanUI(isLocked) {
+        const items = ['inputDeadline', 'inputTahunAnggaran'];
+        items.forEach(id => { const el = document.getElementById(id); if(el) el.disabled = isLocked; });
+        if (tsTahapan) isLocked ? tsTahapan.disable() : tsTahapan.enable();
+        document.getElementById('btnSimpanPengaturan').classList.toggle('hidden', isLocked);
+        document.getElementById('btnHentikanTimer').classList.toggle('hidden', !isLocked);
+    }
+    
+    function simpanPengaturan() {
+        const tahapan = tsTahapan.getValue();
+        let deadline = document.getElementById('inputDeadline').value;
+        const tahun = document.getElementById('inputTahunAnggaran').value;
+        
+        if(!tahapan || !tahun) return showToast("Tahun dan Tahapan wajib diisi!", "error");
+        if(!deadline) return showToast("Batas Waktu (Deadline) WAJIB diisi untuk membuka jadwal!", "error");
+
+        if (deadline && deadline.length === 16) { deadline += ":00"; }
+        let deadlineToSave = deadline ? "_TXT_" + deadline : "";
+
+        sistemTahapan = tahapan; sistemDeadline = deadline; sistemTahunAnggaran = tahun;
+        document.getElementById('displayTahapan').innerText = sistemTahapan;
+        document.getElementById('displayTahunAnggaranList').innerText = "T.A. " + sistemTahunAnggaran;
+        document.getElementById('tahapanWrapper').classList.remove('hidden');
+
+        startCountdown();
+
+        if (typeof google !== 'undefined' && google.script) {
+            showToast("Menyimpan jadwal ke database...");
+            google.script.run
+                .withSuccessHandler(res => { showToast(res.message); })
+                .withFailureHandler(err => { showToast("Gagal menyimpan jadwal: " + err.message, "error"); })
+                .savePengaturanSistem(tahapan, deadlineToSave, tahun);
+        } else {
+            showToast("Jadwal disimpan (Simulasi).");
+        }
+    }
+
+    function hentikanTimer() {
+        if(!confirm("Hentikan jadwal aktif? (Akses input bidang akan ditutup)")) return;
+        sistemDeadline = ""; document.getElementById('inputDeadline').value = ""; startCountdown();
+
+        if (typeof google !== 'undefined' && google.script) {
+            showToast("Menghentikan jadwal...");
+            google.script.run
+                .withSuccessHandler(res => { showToast("Jadwal berhasil dihentikan."); })
+                .withFailureHandler(err => { showToast("Gagal menghentikan jadwal: " + err.message, "error"); })
+                .savePengaturanSistem(sistemTahapan, "", sistemTahunAnggaran);
+        } else { showToast("Jadwal dihentikan (Simulasi)."); }
+    }
+
+    function startCountdown() {
+      if (countdownInterval) clearInterval(countdownInterval);
+      const text = document.getElementById('displayCountdown');
+      const banner = document.getElementById('countdownBanner');
+      const wrapper = document.getElementById('tahapanWrapper');
+
+      if (sistemTahapan && sistemTahapan !== "Belum Diatur") { wrapper.classList.remove('hidden'); document.getElementById('displayTahapan').innerText = sistemTahapan; } 
+      else { wrapper.classList.add('hidden'); }
+
+      if (!sistemDeadline) {
+        text.innerText = "Jadwal belum dibuka / dihentikan";
+        banner.className = "bg-gray-600 text-white text-center py-1.5 text-xs font-bold w-full no-print flex justify-center items-center gap-2 transition-colors";
+        isScheduleActive = false; togglePengaturanUI(false); return;
+      }
+
+      const dest = new Date(sistemDeadline).getTime();
+      if (isNaN(dest)) { text.innerText = "Format tanggal batas waktu invalid"; return; }
+
+      const update = () => {
+        const now = new Date().getTime(), distance = dest - now;
+        if (distance < 0) {
+          clearInterval(countdownInterval);
+          text.innerText = "WAKTU HABIS! (Akses Ditutup)";
+          banner.className = "bg-red-600 text-white text-center py-1.5 text-xs font-bold w-full no-print flex justify-center items-center gap-2 transition-colors";
+          isScheduleActive = false; togglePengaturanUI(false);
+        } else {
+          const d = Math.floor(distance / 86400000), h = Math.floor((distance % 86400000) / 3600000), m = Math.floor((distance % 3600000) / 60000), s = Math.floor((distance % 60000) / 1000);
+          text.innerText = `Sisa Waktu: ${d}H ${h}J ${m}M ${s}D`;
+          banner.className = "bg-blue-700 text-white text-center py-1.5 text-xs font-bold w-full no-print flex justify-center items-center gap-2 transition-colors";
+          isScheduleActive = true; togglePengaturanUI(true);
+        }
+      };
+      update();
+      countdownInterval = setInterval(update, 1000);
+    }
+
+    // AUTH & SESSION (tetap sama)
+    function processLogin(e) {
+        e.preventDefault();
+        const u = document.getElementById('loginUsername').value.trim(), p = document.getElementById('loginPassword').value, btn = document.getElementById('btnSubmitLogin');
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>...';
+        if (typeof google !== 'undefined' && google.script) {
+            google.script.run
+                .withSuccessHandler(res => {
+                    btn.disabled = false; btn.innerHTML = 'Masuk';
+                    if (res.success) {
+                        currentRole = res.role; setSession(currentRole); 
+                        document.getElementById('loginView').classList.add('hidden'); document.getElementById('appContainer').classList.remove('hidden');
+                        updateRoleUI(); switchView('listView'); startSessionMonitor();
+                    } else showToast(res.message, "error");
+                })
+                .withFailureHandler(err => {
+                    btn.disabled = false; btn.innerHTML = 'Masuk'; showToast("Login gagal. Error server: " + err.message, "error");
+                })
+                .verifyLogin(u, p);
+        } else {
+            setTimeout(() => {
+                btn.disabled = false; btn.innerHTML = 'Masuk';
+                currentRole = u === 'admin' ? "Admin Verifikator" : "Dalduk"; setSession(currentRole); 
+                document.getElementById('loginView').classList.add('hidden'); document.getElementById('appContainer').classList.remove('hidden');
+                updateRoleUI(); switchView('listView'); startSessionMonitor();
+            }, 500);
+        }
+    }
+    function logout() { document.getElementById('logoutModal').classList.remove('hidden'); }
+    function closeLogoutModal() { document.getElementById('logoutModal').classList.add('hidden'); }
+    
+    function confirmLogout() { 
+        closeAllModals(); // Memastikan semua jendela pop-up tertutup saat logout
+        currentRole = ""; localStorage.removeItem('eplan_session'); 
+        if (sessionCheckInterval) clearInterval(sessionCheckInterval);
+        document.getElementById('appContainer').classList.add('hidden'); 
+        document.getElementById('loginView').classList.remove('hidden');
+        document.getElementById('loginPassword').value = ''; showToast("Anda telah berhasil keluar.");
+    }
+    
+    function setSession(r) { localStorage.setItem('eplan_session', JSON.stringify({ role: r, timestamp: Date.now() })); }
+    function getSession() {
+        const d = localStorage.getItem('eplan_session'); if(!d) return null;
+        const p = JSON.parse(d); if(Date.now() - p.timestamp > SESSION_TIMEOUT) { localStorage.removeItem('eplan_session'); return null; }
+        return p.role;
+    }
+    function updateRoleUI() {
+      const isAdmin = currentRole.toLowerCase().includes("admin") || currentRole.toLowerCase().includes("verifikator");
+      document.getElementById('displayRole').innerText = currentRole;
+      document.getElementById('adminMenuSection').classList.toggle('hidden', !isAdmin);
+      document.getElementById('btnNavForm').classList.toggle('hidden', isAdmin); // Tombol buat usulan di sidebar
+      document.getElementById('bidangActionButtons').classList.toggle('hidden', isAdmin);
+      loadData();
+    }
+
+    // NAVIGATION
+    function switchView(id) {
+      // Hapus verifikasi formView lama karena diganti rincianView/modals
+      ['listView', 'rincianView', 'rabView', 'pengaturanView', 'userView', 'verifikasiView'].forEach(v => {
+          const el = document.getElementById(v); if(el) el.classList.add('hidden');
+      });
+      const targetEl = document.getElementById(id); if(targetEl) targetEl.classList.remove('hidden');
+      
+      ['btnNavList', 'btnNavRab', 'btnNavPengaturan', 'btnNavUser'].forEach(b => {
+          const elBtn = document.getElementById(b); if(elBtn) elBtn.classList.remove('active');
+      });
+
+      if(id === 'listView') { document.getElementById('btnNavList').classList.add('active'); loadData(); }
+      if(id === 'rabView') { document.getElementById('btnNavRab').classList.add('active'); generateRab(); }
+      if(id === 'pengaturanView') { document.getElementById('btnNavPengaturan').classList.add('active'); setupTahapanDropdown(); }
+      if(id === 'userView') { document.getElementById('btnNavUser').classList.add('active'); fetchUsers(); }
+
+      if (window.innerWidth < 768) document.getElementById('sidebar').classList.remove('mobile-open');
+    }
+
+    function toggleSidebar() { 
+        const sb = document.getElementById('sidebar'); window.innerWidth < 768 ? sb.classList.toggle('mobile-open') : sb.classList.toggle('desktop-closed'); 
+    }
+
+    // =========================================================================
+    // LOGIKA BARU: HEADER DAN RINCIAN (POP UP & LIST)
+    // =========================================================================
+
+    // 1. HEADER USULAN (BUAT BARU / EDIT HEADER)
+    function openHeaderModal() {
+        const isAdmin = currentRole.toLowerCase().includes("admin") || currentRole.toLowerCase().includes("verifikator");
+        if (!isScheduleActive && !isAdmin) { return showModalNotif("Akses Terkunci", "Maaf, jadwal pengajuan belum dibuka atau telah berakhir."); }
+
+        editingDraftId = null; 
+        currentHeaderInfo = { Status: 'DRAFT' };
+        
+        // Reset form
+        if(tsSubKegiatan) tsSubKegiatan.clear();
+        document.getElementById('inputTarget').value = '';
+        document.getElementById('inputIndikator').value = '';
+        document.getElementById('inputTargetSatuan').value = '';
+        
+        document.getElementById('headerModal').classList.remove('hidden');
+        setTimeout(() => { if(tsSubKegiatan) tsSubKegiatan.sync(); }, 50);
+    }
+
+    function closeHeaderModal() {
+        document.getElementById('headerModal').classList.add('hidden');
+    }
+
+    function lanjutKeRincian() {
+        const sk = document.getElementById('selectSubKegiatan').value;
+        const targetNum = document.getElementById('inputTarget').value;
+        const targetSatuan = document.getElementById('inputTargetSatuan').value;
+        const indikatorVal = document.getElementById('inputIndikator').value;
+        
+        if(!sk || !targetNum) return showToast("Lengkapi Sub Kegiatan dan Target!", "error");
+        
+        currentHeaderInfo = {
+            ID_Usulan: editingDraftId, // Null jika baru
+            Bidang: currentRole,
+            Sub_Kegiatan: sk,
+            Target: targetNum + " " + targetSatuan,
+            Indikator: indikatorVal,
+            Status: currentHeaderInfo.Status || 'DRAFT'
+        };
+
+        if(!editingDraftId) { tempRincian = []; } // Jika usulan baru, rincian kosong
+        
+        closeHeaderModal();
+        renderRincianView();
+        switchView('rincianView');
+    }
+
+    // 2. TAMPILAN RINCIAN VIEW (LIST RINCIAN)
+    function openRincianView(idUsulan) {
+        const header = allData.find(d => d.ID_Usulan === idUsulan); if(!header) return;
+        editingDraftId = idUsulan;
+        currentHeaderInfo = { ...header };
+        
+        // Tarik data rincian dari allRincian ke tempRincian
+        const items = allRincian.filter(r => r.ID_Usulan === idUsulan); 
+        tempRincian = JSON.parse(JSON.stringify(items)); 
+        
+        renderRincianView();
+        switchView('rincianView');
+    }
+
+    function renderRincianView() {
+        // Update Title & Badge
+        document.getElementById('rincianViewTitle').innerText = currentHeaderInfo.Sub_Kegiatan;
+        document.getElementById('rincianViewIndikator').innerText = currentHeaderInfo.Indikator || '-';
+        document.getElementById('rincianViewTarget').innerText = currentHeaderInfo.Target || '-';
+        
+        const badge = document.getElementById('rincianViewStatusBadge');
+        badge.innerText = currentHeaderInfo.Status;
+        badge.className = "absolute top-0 right-0 px-4 py-2 text-white font-bold text-[10px] tracking-widest uppercase rounded-bl-xl shadow-sm " + 
+                          (currentHeaderInfo.Status === 'DISETUJUI' ? 'bg-green-600' : 
+                          (currentHeaderInfo.Status === 'VERIFIKASI' ? 'bg-yellow-500' : 
+                          (currentHeaderInfo.Status === 'KOREKSI' ? 'bg-orange-500' : 'bg-gray-500')));
+
+        // Evaluasi Kunci (Enable/Disable Aksi)
+        const isAdmin = currentRole.toLowerCase().includes("admin") || currentRole.toLowerCase().includes("verifikator");
+        // Boleh edit jika dia bukan admin, jadwal aktif (atau admin diabaikan), dan status Draft/Koreksi
+        const isEditable = !isAdmin && (isScheduleActive || isAdmin) && (currentHeaderInfo.Status === 'DRAFT' || currentHeaderInfo.Status === 'KOREKSI');
+
+        document.getElementById('btnTambahRincian').classList.toggle('hidden', !isEditable);
+        document.getElementById('rincianSaveWrapper').classList.toggle('hidden', !isEditable);
+
+        // Render Table
+        const tbody = document.getElementById('rincianTableBody');
+        let total = 0;
+
+        if (tempRincian.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-400 italic font-medium">Belum ada rincian belanja. Silakan tambah rincian.</td></tr>`;
+        } else {
+            tbody.innerHTML = tempRincian.map((it, idx) => {
+                total += it.Sub_Total;
+                
+                // Cari Nama Rekening
+                const rek = allRekening.find(r => r.kode === it.Kode_Rekening);
+                const namaRekening = rek ? rek.nama : "-";
+
+                // Format sesuai Image 2
+                return `
+                <tr class="border-b hover:bg-blue-50/50 transition">
+                    <td class="p-4 text-center font-bold text-gray-400">${idx+1}</td>
+                    <td class="p-4 min-w-[250px] whitespace-normal">
+                        <div class="font-bold text-blue-800 text-xs mb-1">[ # ] ${it.Sumber_Dana}</div>
+                        <div class="ml-4 text-sm font-semibold text-gray-800">[ - ] ${it.Komponen} <br><span class="text-xs text-gray-500 font-normal italic">${it.Spesifikasi}</span></div>
+                        <div class="ml-4 mt-1.5 text-[10px] text-gray-500 font-mono bg-gray-100 px-2 py-1 rounded inline-block"><i class="fas fa-wallet mr-1"></i> ${it.Kode_Rekening} - ${namaRekening}</div>
+                    </td>
+                    <td class="p-4 text-center">
+                        <span class="font-bold text-gray-800">${it.Volume}</span><br>
+                        <span class="text-[10px] text-gray-400">${it.Koefisien}</span>
+                    </td>
+                    <td class="p-4 text-right font-medium text-gray-600">${it.Harga_Satuan.toLocaleString('id-ID')}</td>
+                    <td class="p-4 text-right font-black text-blue-700">${it.Sub_Total.toLocaleString('id-ID')}</td>
+                    <td class="p-4 text-center whitespace-nowrap">
+                        <button onclick="openRincianModal('VIEW', ${idx})" class="text-indigo-500 mx-1 bg-indigo-50 p-2 rounded hover:bg-indigo-100 transition" title="Lihat Rincian"><i class="fas fa-search"></i></button>
+                        ${isEditable ? `
+                        <button onclick="openRincianModal('EDIT', ${idx})" class="text-blue-500 mx-1 bg-blue-50 p-2 rounded hover:bg-blue-100 transition" title="Edit"><i class="fas fa-pencil-alt"></i></button>
+                        <button onclick="hapusRincianTemp(${idx})" class="text-red-500 mx-1 bg-red-50 p-2 rounded hover:bg-red-100 transition" title="Hapus"><i class="fas fa-trash-alt"></i></button>
+                        ` : ''}
+                    </td>
+                </tr>
+                `;
+            }).join('');
+        }
+
+        document.getElementById('rincianViewTotal').innerText = formatRp(total);
+    }
+
+    // 3. FORM INPUT RINCIAN (MODAL)
+    function openRincianModal(mode, index = -1) {
+        editingRincianIndex = index;
+        const modal = document.getElementById('rincianModal');
+        const title = document.getElementById('rincianModalTitle');
+        const btnSimpan = document.getElementById('btnSimpanRincian');
+        const btnBatal = document.getElementById('btnBatalRincian');
+        
+        // Elements array untuk disabled/enabled toggle
+        const formElements = ['inputKomponen', 'inputSpesifikasi', 'inputKeterangan', 'hargaSatuan', 'jml1', 'jml2', 'jml3', 'jml4'];
+
+        // Helper untuk set state
+        const setFieldState = (isDisabled) => {
+            formElements.forEach(id => { document.getElementById(id).disabled = isDisabled; });
+            if (tsSumberDana) isDisabled ? tsSumberDana.disable() : tsSumberDana.enable();
+            if (tsRekening) isDisabled ? tsRekening.disable() : tsRekening.enable();
+            tsSatuan.forEach(ts => { if(ts) { isDisabled ? ts.disable() : ts.enable(); } });
+            btnSimpan.classList.toggle('hidden', isDisabled);
+            btnBatal.innerText = isDisabled ? "Tutup" : "Batal";
+        };
+
+        if (mode === 'NEW') {
+            title.innerHTML = '<i class="fas fa-plus text-blue-600 mr-2"></i> Tambah Rincian Baru';
+            // Reset Fields
+            if(tsSumberDana) tsSumberDana.clear();
+            if(tsRekening) tsRekening.clear();
+            tsSatuan.forEach(ts => { if(ts) ts.clear(); });
+            formElements.forEach(id => { document.getElementById(id).value = ''; });
+            document.getElementById('displaySubTotal').innerText = "Rp 0";
+            setFieldState(false);
+        } else {
+            // EDIT ATAU VIEW
+            title.innerHTML = mode === 'VIEW' ? '<i class="fas fa-search text-indigo-600 mr-2"></i> Detail Rincian' : '<i class="fas fa-edit text-blue-600 mr-2"></i> Edit Rincian';
+            const it = tempRincian[index];
+            
+            setTimeout(() => {
+                if(tsSumberDana) tsSumberDana.setValue(it.Sumber_Dana);
+                if(tsRekening) tsRekening.setValue(it.Kode_Rekening);
+                document.getElementById('inputKomponen').value = it.Komponen;
+                document.getElementById('inputSpesifikasi').value = it.Spesifikasi;
+                document.getElementById('inputKeterangan').value = it.Keterangan;
+                document.getElementById('hargaSatuan').value = it.Harga_Satuan;
+                
+                // Parse Koefisien kembali ke input JML dan Satuan
+                tsSatuan.forEach(ts => { if(ts) ts.clear(); });
+                [1,2,3,4].forEach(i => { document.getElementById('jml'+i).value = ''; });
+                
+                let koefParts = it.Koefisien.split(' x ');
+                koefParts.forEach((part, i) => {
+                    if (i < 4) {
+                        let num = parseFloat(part);
+                        let text = part.replace(/[0-9.]/g, '').trim();
+                        document.getElementById('jml'+(i+1)).value = isNaN(num) ? '' : num;
+                        if (text && tsSatuan[i]) {
+                            tsSatuan[i].addOption({value: text, text: text});
+                            tsSatuan[i].setValue(text);
+                        }
+                    }
+                });
+
+                calculateSubTotal();
+                setFieldState(mode === 'VIEW');
+            }, 100);
+        }
+
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            if(tsSumberDana) tsSumberDana.sync();
+            if(tsRekening) tsRekening.sync();
+        }, 50);
+    }
+
+    function closeRincianModal() { document.getElementById('rincianModal').classList.add('hidden'); }
+
+    function calculateSubTotal() {
+      let v = 1, c = 0; [1,2,3,4].forEach(i => { let val = parseFloat(document.getElementById('jml'+i).value); if(val>0){ v*=val; c++; } });
+      const h = parseFloat(document.getElementById('hargaSatuan').value) || 0;
+      document.getElementById('displaySubTotal').innerText = formatRp(c === 0 ? 0 : v * h);
+    }
+
+    function simpanRincianItem() {
+      const k = document.getElementById('inputKomponen').value;
+      const r = document.getElementById('selectRekening').value;
+      const d = document.getElementById('selectSumberDana').value;
+      const h = parseFloat(document.getElementById('hargaSatuan').value);
+      
+      if(!k || !r || !d || isNaN(h)) return showToast("Lengkapi Sumber Dana, Rekening, Komponen & Harga!", "error");
+      
+      let v = 1, kf = []; 
+      [1,2,3,4].forEach(i => { 
+          let val = parseFloat(document.getElementById('jml'+i).value); 
+          if(val > 0) { 
+              v *= val; 
+              let unit = document.getElementById('sat'+i).value; 
+              kf.push(val + (unit ? " " + unit : "")); 
+          } 
+      });
+
+      const newItem = { 
+          Sumber_Dana: d, 
+          Kode_Rekening: r, 
+          Komponen: k, 
+          Spesifikasi: document.getElementById('inputSpesifikasi').value, 
+          Volume: v || 1, 
+          Harga_Satuan: h, 
+          Sub_Total: (v||1)*h, 
+          Koefisien: kf.join(' x ') || '1 Unit', 
+          Keterangan: document.getElementById('inputKeterangan').value, 
+          Catatan: editingRincianIndex !== -1 ? tempRincian[editingRincianIndex].Catatan : '',
+          Status_Item: editingRincianIndex !== -1 ? tempRincian[editingRincianIndex].Status_Item : 'BELUM'
+      };
+
+      if (editingRincianIndex === -1) {
+          tempRincian.push(newItem);
+          showToast("Item berhasil ditambahkan.");
+      } else {
+          tempRincian[editingRincianIndex] = newItem;
+          showToast("Item berhasil diperbarui.");
+      }
+
+      closeRincianModal();
+      renderRincianView();
+    }
+
+    function hapusRincianTemp(index) {
+        if(confirm("Hapus rincian ini?")) {
+            tempRincian.splice(index, 1);
+            renderRincianView();
+        }
+    }
+
+    // 4. SIMPAN FINAL KE DATABASE
+    function saveUsulanKeDatabase() {
+      if (tempRincian.length === 0) return showToast("Tambahkan minimal 1 Rincian Belanja!", "error");
+      
+      // Update Total
+      currentHeaderInfo.Total_Anggaran = tempRincian.reduce((s,i)=>s+i.Sub_Total, 0);
+      
+      showToast("Menyimpan usulan...");
+      if (typeof google !== 'undefined' && google.script) {
+        google.script.run
+            .withSuccessHandler(res => { 
+                if(res.success) { 
+                    showToast("Draft usulan berhasil disimpan."); 
+                    loadAllInitialData(); 
+                    switchView('listView'); 
+                } else { showToast(res.message, "error"); }
+            })
+            .withFailureHandler(err => { showToast("Gagal menyimpan ke server: " + err.message, "error"); })
+            .simpanUsulan(currentHeaderInfo, tempRincian);
+      } else {
+          // Simulasi Local
+          showToast("Simulasi tersimpan.");
+          switchView('listView');
+      }
+    }
+
+
+    // DATA LOADING (DASHBOARD)
+    function loadData() {
+      const tbody = document.getElementById('tableBody'); if(!tbody) return;
+      const isAdmin = currentRole.toLowerCase().includes("admin") || currentRole.toLowerCase().includes("verifikator");
+      const filtered = isAdmin ? allData : allData.filter(d => d.Bidang === currentRole);
+
+      // Dashboards
+      document.getElementById('dashTotalUsulan').innerText = filtered.length;
+      document.getElementById('dashTotalAnggaran').innerText = formatRp(filtered.reduce((s, i) => s + (Number(i.Total_Anggaran) || 0), 0));
+      document.getElementById('dashDisetujui').innerText = filtered.filter(x => x.Status === 'DISETUJUI').length;
+      document.getElementById('dashProses').innerText = filtered.filter(x => x.Status === 'VERIFIKASI' || x.Status === 'KOREKSI').length;
+
+      if(filtered.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="p-10 text-center italic text-gray-400">Belum ada usulan pada bidang ini.</td></tr>'; return; }
+      
+      tbody.innerHTML = filtered.map(g => {
+        let bc = 'status-draft';
+        if(g.Status === 'KOREKSI') bc = 'status-koreksi';
+        if(g.Status === 'VERIFIKASI') bc = 'status-verifikasi';
+        if(g.Status === 'DISETUJUI') bc = 'status-disetujui';
+        return `
+        <tr class="hover:bg-blue-50/50 border-b">
+          <td class="px-6 py-4"><span class="px-2 py-1 rounded-full text-[10px] font-bold ${bc}">${g.Status || 'DRAFT'}</span></td>
+          <td class="px-6 py-4 text-xs font-medium text-gray-500">${g.Bidang}</td>
+          <td class="px-6 py-4"><button onclick="openRincianView('${g.ID_Usulan}')" class="text-left font-bold text-slate-700 hover:text-blue-600 w-full whitespace-normal block">${g.Sub_Kegiatan}</button></td>
+          <td class="px-6 py-4 text-right font-black text-blue-900">${formatRp(g.Total_Anggaran)}</td>
+          <td class="px-6 py-4 text-center whitespace-nowrap">
+            ${(!isAdmin && (g.Status === 'DRAFT' || g.Status === 'KOREKSI')) ? 
+              `<button onclick="openRincianView('${g.ID_Usulan}')" class="text-blue-500 mr-3" title="Edit"><i class="fas fa-edit fa-lg"></i></button><button onclick="openDeleteModal('${g.ID_Usulan}')" class="text-red-500 mr-3" title="Hapus"><i class="fas fa-trash fa-lg"></i></button>` : 
+              `<button onclick="openRincianView('${g.ID_Usulan}')" class="text-indigo-500 mr-3" title="Lihat Daftar Rincian"><i class="fas fa-list fa-lg"></i></button>`}
+            ${(isAdmin && g.Status === 'VERIFIKASI') ? `<button onclick="openVerifikasi('${g.ID_Usulan}')" class="text-green-600 mr-3" title="Review Verifikasi"><i class="fas fa-check-double fa-lg"></i></button>` : ''}
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    // FUNGSI KIRIM & HAPUS USULAN (tetap sama)
+    function kirimUsulan() {
+        const isAdmin = currentRole.toLowerCase().includes("admin") || currentRole.toLowerCase().includes("verifikator");
+        if (!isScheduleActive && !isAdmin) { return showModalNotif("Akses Terkunci", "Maaf, jadwal pengajuan telah dikunci."); }
+        const drafts = allData.filter(d => d.Bidang === currentRole && (d.Status === 'DRAFT' || d.Status === 'KOREKSI'));
+        if (drafts.length === 0) { return showToast("Tidak ada usulan DRAFT / KOREKSI.", "error"); }
+        document.getElementById('kirimModalText').innerText = `Kirim ${drafts.length} usulan untuk diverifikasi Admin?`;
+        document.getElementById('kirimModal').classList.remove('hidden');
+    }
+
+    function closeKirimModal() { document.getElementById('kirimModal').classList.add('hidden'); }
+
+    function confirmKirimUsulan() {
+        closeKirimModal(); showToast("Mengirim...");
+        if (typeof google !== 'undefined' && google.script) {
+            google.script.run
+                .withSuccessHandler(function(res) { if(res.success) { showToast(res.message); loadAllInitialData(); } else { showToast(res.message, "error"); } })
+                .withFailureHandler(err => { showToast("Error server: " + err.message, "error"); })
+                .kirimUsulanBidang(currentRole);
+        } else { loadData(); showToast("Dikirim (Simulasi)!"); }
+    }
+
+    function openDeleteModal(idUsulan) { proposalToDeleteId = idUsulan; document.getElementById('deleteModal').classList.remove('hidden'); }
+    function closeDeleteModal() { proposalToDeleteId = null; document.getElementById('deleteModal').classList.add('hidden'); }
+    function confirmDeleteProposal() {
+        if (!proposalToDeleteId) return; const id = proposalToDeleteId; closeDeleteModal(); showToast("Menghapus...");
+        if (typeof google !== 'undefined' && google.script) {
+            google.script.run
+                .withSuccessHandler(function(res) { if(res.success) { showToast(res.message); loadAllInitialData(); } else { showToast(res.message, "error"); } })
+                .withFailureHandler(err => { showToast("Gagal menghapus: " + err.message, "error"); })
+                .hapusUsulan(id);
+        } else { allData = allData.filter(d => d.ID_Usulan !== id); loadData(); showToast("Dihapus (Simulasi)!"); }
+    }
+
+
+    // VERIFIKASI ADMIN
+    function openVerifikasi(id) {
+        const h = allData.find(d => d.ID_Usulan === id); if(!h) return;
+        currentVerifikasiId = id;
+        document.getElementById('verifSubKegiatan').innerText = h.Sub_Kegiatan; document.getElementById('verifBidang').innerText = h.Bidang;
+        verifikasiItems = allRincian.filter(r => r.ID_Usulan === id).map(it => ({ ...it, Status_Item: it.Status_Item || 'BELUM', Catatan: it.Catatan || '' }));
+        renderVerifikasiTable(); switchView('verifikasiView');
+    }
+    function renderVerifikasiTable() {
+        document.getElementById('verifTableBody').innerHTML = verifikasiItems.map((it, idx) => `
+            <tr class="border-b hover:bg-blue-50 transition">
+                <td class="p-4 text-center"><input type="checkbox" class="checkbox-custom verif-checkbox" data-index="${idx}" onchange="checkVerifSelected()"></td>
+                <td class="p-4 min-w-[200px] whitespace-normal"><b>${it.Komponen}</b><br><small class="text-gray-500">${it.Spesifikasi}</small><br><span class="bg-green-100 text-green-700 text-[10px] px-1 rounded mt-1 inline-block">${it.Sumber_Dana}</span></td>
+                <td class="p-4 text-center"><b>${it.Volume}</b><br><span class="text-[10px] text-gray-500 italic">${it.Koefisien}</span><br><span class="text-xs text-blue-600 font-bold">@ ${formatRp(it.Harga_Satuan)}</span></td>
+                <td class="p-4 text-right font-bold text-blue-700">${formatRp(it.Sub_Total)}</td>
+                <td class="p-4 text-center">
+                    <button onclick="setItemStatus(${idx}, 'DISETUJUI')" class="border border-green-500 text-green-600 px-2 py-1 rounded text-[10px] mr-1 hover:bg-green-50"><i class="fas fa-check"></i></button>
+                    <button onclick="setItemStatus(${idx}, 'KOREKSI')" class="border border-red-500 text-red-600 px-2 py-1 rounded text-[10px] hover:bg-red-50"><i class="fas fa-times"></i></button>
+                    <div class="text-[10px] font-bold mt-2">${it.Status_Item === 'DISETUJUI' ? '<span class="text-green-600">DISETUJUI</span>' : (it.Status_Item === 'KOREKSI' ? '<span class="text-red-600">KOREKSI</span>' : '<span class="text-gray-400">BELUM REVIEW</span>')}</div>
+                </td>
+                <td class="p-4"><textarea onchange="verifikasiItems[${idx}].Catatan=this.value" class="w-full text-xs border border-gray-300 p-2 rounded focus:border-blue-500 focus:outline-none" placeholder="Catatan Admin...">${it.Catatan}</textarea></td>
+            </tr>`).join('');
+        
+        const reviewed = verifikasiItems.filter(i => i.Status_Item !== 'BELUM').length;
+        document.getElementById('verifProgressBar').style.width = (verifikasiItems.length === 0 ? 0 : Math.round((reviewed / verifikasiItems.length) * 100)) + '%';
+    }
+    function setItemStatus(i, s) { verifikasiItems[i].Status_Item = s; renderVerifikasiTable(); }
+    function checkVerifSelected() {
+        let all = true; document.querySelectorAll('.verif-checkbox').forEach(c => { if(!c.checked) all = false; });
+        document.getElementById('checkAllVerif').checked = all;
+    }
+    function toggleAllVerif(source) { document.querySelectorAll('.verif-checkbox').forEach(cb => cb.checked = source.checked); }
+    function setBulkStatus(status) {
+        document.querySelectorAll('.verif-checkbox').forEach(cb => {
+            if(cb.checked) { verifikasiItems[cb.getAttribute('data-index')].Status_Item = status; cb.checked = false; }
+        });
+        document.getElementById('checkAllVerif').checked = false; renderVerifikasiTable();
+    }
+    function simpanHasilVerifikasi() {
+        if(verifikasiItems.some(i => i.Status_Item === 'BELUM')) return showToast("Ada rincian yang BELUM direview!", "error");
+        const status = verifikasiItems.some(i => i.Status_Item === 'KOREKSI') ? 'KOREKSI' : 'DISETUJUI';
+        if(!confirm(status === 'KOREKSI' ? "Kembalikan ke Bidang untuk dikoreksi?" : "Setujui usulan ini?")) return;
+        
+        showToast("Menyimpan hasil verifikasi...");
+        if (typeof google !== 'undefined' && google.script) {
+            google.script.run
+                .withSuccessHandler(res => { 
+                    if(res.success) { showToast(res.message); loadAllInitialData(); switchView('listView'); } else { showToast(res.message, "error"); }
+                })
+                .withFailureHandler(err => { showToast("Gagal menyimpan verifikasi: " + err.message, "error"); })
+                .simpanHasilVerifikasi(currentVerifikasiId, status, verifikasiItems);
+        }
+    }
+
+    // PRINT / EXCEL RAB (tetap sama)
+    function generateRab() {
+       const body = document.getElementById('rabBody'); if(!body) return;
+       const isAdmin = currentRole.toLowerCase().includes("admin") || currentRole.toLowerCase().includes("verifikator");
+       const adminControl = document.getElementById('rabAdminControl'); const bidangControl = document.getElementById('rabBidangControl');
+
+       if (isAdmin) {
+           if(adminControl) adminControl.classList.remove('hidden'); if(bidangControl) bidangControl.classList.add('hidden');
+           const selectBidang = document.getElementById('selectRabBidang');
+           if (selectBidang && selectBidang.options.length <= 1) { bidangList.forEach(b => { const opt = document.createElement('option'); opt.value = b; opt.text = b; selectBidang.appendChild(opt); }); }
+       } else {
+           if(adminControl) adminControl.classList.add('hidden'); if(bidangControl) bidangControl.classList.remove('hidden');
+       }
+       
+       const selectedBidang = isAdmin ? (document.getElementById('selectRabBidang')?.value || 'ALL') : currentRole;
+       const validHeaders = allData.filter(d => {
+         if (isAdmin) {
+             const isNotDraft = d.Status && d.Status !== 'DRAFT'; const isNotAdmin = d.Bidang !== 'Admin Verifikator';
+             if (selectedBidang === 'ALL') return isNotDraft && isNotAdmin; return isNotDraft && d.Bidang === selectedBidang;
+         }
+         return d.Bidang === currentRole;
+       });
+       
+       const validIds = validHeaders.map(h => h.ID_Usulan);
+       const filteredRincian = allRincian.filter(r => validIds.includes(r.ID_Usulan));
+       const unitKerjaText = isAdmin ? (selectedBidang === 'ALL' ? 'SEMUA BIDANG' : selectedBidang.toUpperCase()) : currentRole.toUpperCase();
+       
+       document.getElementById('rabSumberDanaTitle').innerText = `TAHAPAN ${sistemTahapan.toUpperCase()} T.A. ${sistemTahunAnggaran}`;
+       document.getElementById('rabUnitKerjaDisplay').innerText = `BIDANG ${unitKerjaText}`; document.getElementById('rabSignText').innerText = `BIDANG ${unitKerjaText}`;
+       
+       if (filteredRincian.length === 0) { 
+           body.innerHTML = '<tr><td colspan="16" class="p-10 text-center italic text-gray-500">Belum ada data usulan.</td></tr>'; document.getElementById('rabGrandTotal').innerText = formatRp(0); return; 
+       }
+
+       const groupedData = {}; validHeaders.forEach(h => { groupedData[h.ID_Usulan] = { header: h, items: [], total: 0 }; });
+       let grandTotal = 0; filteredRincian.forEach(r => { if(groupedData[r.ID_Usulan]) { groupedData[r.ID_Usulan].items.push(r); groupedData[r.ID_Usulan].total += r.Sub_Total; grandTotal += r.Sub_Total; } });
+       document.getElementById('rabGrandTotal').innerText = formatRp(grandTotal);
+
+       let html = ""; let urutPrior = 1;
+       for (let id in groupedData) {
+           let group = groupedData[id]; let items = group.items; if(items.length === 0) continue; 
+           let targetParts = group.header.Target ? group.header.Target.trim().split(" ") : [""]; let targetNum = targetParts[0] || ""; let targetSat = targetParts.length > 1 ? targetParts.slice(1).join(" ") : "";
+
+           items.forEach((item, index) => {
+               html += `<tr class="border-b border-black">`;
+               if (index === 0) { html += `<td class="text-center align-top" rowspan="${items.length}">${urutPrior++}</td><td class="align-top" rowspan="${items.length}">${item.Keterangan || group.header.Sub_Kegiatan}</td>`; }
+
+               let rekMaster = allRekening.find(r => r.kode === item.Kode_Rekening); let rekName = rekMaster ? rekMaster.nama : ""; let rekDisplay = rekName ? `<b>${item.Kode_Rekening}</b><br>${rekName}` : item.Kode_Rekening;
+
+               html += `<td class="align-top text-left">${rekDisplay}</td><td class="align-top">${item.Komponen}</td><td class="align-top">${item.Spesifikasi}</td>`;
+               
+               let extractedUnits = item.Koefisien.split('x').map(p => p.replace(/[0-9.]/g, '').trim()).filter(p => p !== '').join(' / ');
+               
+               html += `<td class="text-center align-top font-bold">${item.Volume}</td><td class="text-center align-top">${extractedUnits}</td><td class="text-center align-top">${item.Koefisien}</td><td class="text-right whitespace-nowrap align-top">${formatRp(item.Harga_Satuan)}</td><td class="text-right whitespace-nowrap align-top">${formatRp(item.Sub_Total)}</td>`;
+
+               if (index === 0) {
+                  html += `<td class="text-right font-bold align-top whitespace-nowrap" rowspan="${items.length}">${formatRp(group.total)}</td><td class="align-top" rowspan="${items.length}">${group.header.Sub_Kegiatan}</td>`;
+               }
+               
+               html += `<td class="text-center align-top">${item.Sumber_Dana}</td>`;
+
+               if (index === 0) {
+                  html += `<td class="align-top text-left" rowspan="${items.length}">${group.header.Indikator || '-'}</td><td class="text-center align-top" rowspan="${items.length}">${targetNum}</td><td class="text-center align-top" rowspan="${items.length}">${targetSat}</td>`;
+               }
+               html += `</tr>`;
+           });
+       }
+       body.innerHTML = html;
+    }
+
+    function exportToExcel() {
+      const table = document.getElementById('exportRabTable'); if (!table) return;
+      let sumberDanaRaw = document.getElementById('rabSumberDanaTitle').innerText; let unitKerjaRaw = document.getElementById('rabUnitKerjaDisplay').innerText; let unitKerja = unitKerjaRaw.replace('BIDANG ', '').replace(/[^a-zA-Z0-9 ]/g, "").trim(); let filename = `RAB_${unitKerja}.xls`.replace(/ /g, "_");
+      let html = table.cloneNode(true).outerHTML;
+      let excelFile = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><style>table { border-collapse: collapse; width: 100%; font-family: 'Arial', sans-serif; font-size: 11px; }th, td { border: 1px solid #000000; padding: 4px; vertical-align: top; }th { text-align: center; vertical-align: middle; }.rab-header-green th { background-color: #92D050; font-weight: bold; color: #000; }.rab-total-blue td { background-color: #00B0F0; font-weight: bold; color: #000; }.text-center { text-align: center; }.text-right { text-align: right; }.text-left { text-align: left; }.font-bold { font-weight: bold; }.align-top { vertical-align: top; }</style></head>
+        <body><div style="text-align: center; font-weight: bold; font-size: 14px; margin-bottom: 20px;"><div>RENCANA ANGGARAN BIAYA (RAB)</div><div>${sumberDanaRaw}</div><div>${unitKerjaRaw}</div></div>${html}<br><br><table style="border:none; width:100%;"><tr><td style="border:none; width:75%;"></td><td style="border:none; text-align:center;">Mengetahui<br>Kepala ${unitKerjaRaw}<br><br><br><br><br><b><u>NAMA PEJABAT TERKAIT</u></b><br>NIP. ........................................</td></tr></table></body></html>
+      `;
+      let blob = new Blob([excelFile], { type: 'application/vnd.ms-excel' }); let url = URL.createObjectURL(blob); let a = document.createElement('a'); a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); showToast("File Excel berhasil diunduh!");
+    }
+
+    // INITIALIZATION (tetap sama)
+    function loadAllInitialData() {
+      if (typeof google !== 'undefined' && google.script) {
+        google.script.run
+          .withSuccessHandler(res => {
+              if(res.success) {
+                sistemTahapan = res.pengaturan.tahapan; 
+                let rawDeadline = res.pengaturan.deadline || ""; 
+                sistemTahunAnggaran = res.pengaturan.tahun;
+                
+                document.getElementById('displayTahapan').innerText = sistemTahapan;
+                document.getElementById('displayTahunAnggaranList').innerText = "T.A. " + sistemTahunAnggaran;
+                
+                if (typeof rawDeadline === 'string' && rawDeadline.startsWith("_TXT_")) {
+                    sistemDeadline = rawDeadline.replace("_TXT_", "");
+                } else {
+                    sistemDeadline = rawDeadline; 
+                }
+                
+                if (sistemDeadline) { 
+                    let d = new Date(sistemDeadline); 
+                    if (!isNaN(d.getTime())) { 
+                        let tzoffset = (new Date()).getTimezoneOffset() * 60000; 
+                        document.getElementById('inputDeadline').value = (new Date(d.getTime() - tzoffset)).toISOString().slice(0, 16); 
+                    } 
+                } else { document.getElementById('inputDeadline').value = ""; }
+
+                startCountdown(); 
+                allData = res.usulan; allRincian = res.rincian; allRekening = res.rekening;
+                loadData(); setupDropdownsLengkap(res);
+              }
+          })
+          .withFailureHandler(err => {
+              console.error(err);
+              showToast("Gagal memuat data dari server: " + err.message, "error");
+              document.getElementById('displayCountdown').innerText = "Error server: " + err.message;
+          })
+          .getInitialData();
+      } else {
+          setTimeout(() => {
+              sistemTahapan = "Simulasi Lokal";
+              let d = new Date(); d.setDate(d.getDate() + 1); sistemDeadline = d.toISOString();
+              startCountdown();
+              setupDropdownsLengkap({
+                  subKegiatan: [{kode:"1", nama:"Testing Sub Kegiatan", indikator: "Jumlah Dokumen Perencanaan yang Disusun", satuan: "Dokumen"}], 
+                  sumberDana: ["DAU", "DAK Non Fisik"], 
+                  rekening: [{kode:"5.1.02.01.01", nama:"Belanja Alat Tulis Kantor"}], 
+                  satuan: ["Pkt", "Orang", "Bulan"]
+              });
+          }, 500);
+      }
+    }
+    
+    function setupDropdownsLengkap(res) {
+       if(tsSubKegiatan) tsSubKegiatan.destroy();
+       const sk = document.getElementById('selectSubKegiatan'); sk.innerHTML = '<option value=""></option>';
+       
+       window.subKegiatanData = res.subKegiatan; 
+       res.subKegiatan.forEach(i => sk.add(new Option(i.kode + " - " + i.nama, i.nama)));
+       tsSubKegiatan = new TomSelect(sk, { 
+           placeholder: "Cari Sub Kegiatan...",
+           onChange: function(value) {
+               const selected = window.subKegiatanData.find(item => item.nama === value);
+               if (selected) {
+                   document.getElementById('inputIndikator').value = selected.indikator || '-';
+                   document.getElementById('inputTargetSatuan').value = selected.satuan || '-';
+               } else {
+                   document.getElementById('inputIndikator').value = '';
+                   document.getElementById('inputTargetSatuan').value = '';
+               }
+           }
+       });
+
+       if(tsSumberDana) tsSumberDana.destroy();
+       const sd = document.getElementById('selectSumberDana'); sd.innerHTML = '<option value=""></option>';
+       res.sumberDana.forEach(i => sd.add(new Option(i, i)));
+       tsSumberDana = new TomSelect(sd, { placeholder: "Pilih Dana..." });
+
+       if(tsRekening) tsRekening.destroy();
+       const sr = document.getElementById('selectRekening'); sr.innerHTML = '<option value=""></option>';
+       res.rekening.forEach(i => sr.add(new Option(i.kode + " - " + i.nama, i.kode)));
+       tsRekening = new TomSelect(sr, { placeholder: "Cari Rekening..." });
+
+       [1,2,3,4].forEach(n => {
+           const el = document.getElementById('sat'+n);
+           if (tsSatuan[n-1]) tsSatuan[n-1].destroy();
+           el.innerHTML = '<option value="">Satuan</option>';
+           res.satuan.forEach(i => el.add(new Option(i, i)));
+           tsSatuan[n-1] = new TomSelect(el, { create: true });
+       });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initUserForm();
+        const r = getSession(); if(r) { currentRole = r; document.getElementById('loginView').classList.add('hidden'); document.getElementById('appContainer').classList.remove('hidden'); updateRoleUI(); switchView('listView'); startSessionMonitor(); }
+        loadAllInitialData();
+    });
+    
+    function startSessionMonitor() { 
+        if (sessionCheckInterval) clearInterval(sessionCheckInterval);
+        sessionCheckInterval = setInterval(() => { 
+            if(currentRole && !getSession()) {
+                closeAllModals(); // Menutup semua pop-up otomatis jika sesi habis
+                currentRole = "";
+                document.getElementById('appContainer').classList.add('hidden'); 
+                document.getElementById('loginView').classList.remove('hidden');
+                document.getElementById('loginPassword').value = '';
+                showToast("Sesi Anda telah berakhir, silakan login kembali.", "error");
+            }
+        }, 60000); 
+    }
+  </script>
+</body>
+</html>
