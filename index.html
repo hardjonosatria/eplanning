@@ -12,6 +12,9 @@
   <!-- Tom Select CSS -->
   <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
 
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
     
@@ -45,23 +48,16 @@
       background-color: #e5e7eb; color: #6b7280; cursor: not-allowed; opacity: 0.8;
     }
 
-    .ts-wrapper .ts-control { min-height: 42px; display: flex; align-items: center; }
-    .ts-wrapper.single .ts-control::after { border-color: #9ca3af transparent transparent transparent; }
+    /* Perbaikan Dropdown Tom Select (Kembali ke Default yang Rapi) */
     .ts-wrapper { width: 100% !important; }
-
-    /* Perbaikan Z-Index Dropdown agar tidak menutupi Modal yang indexnya 9999 */
-    .ts-dropdown { 
-      border-radius: 0.375rem; 
-      border: 1px solid #e2e8f0; 
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); 
-      z-index: 10050 !important; 
-    }
-    
-    .z-modal { z-index: 9999 !important; }
-    .z-toast { z-index: 10000 !important; }
-
+    .ts-wrapper.single .ts-control::after { border-color: #9ca3af transparent transparent transparent; }
+    .ts-wrapper.single .ts-control { min-height: 42px; display: flex; align-items: center; }
+    .ts-dropdown { border-radius: 0.375rem; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); z-index: 10050 !important; }
     .ts-dropdown .option { padding: 0.5rem 0.8rem; font-size: 0.875rem; }
     .ts-dropdown .option.active { background-color: #eff6ff; color: #1e40af; }
+
+    .z-modal { z-index: 9999 !important; }
+    .z-toast { z-index: 10000 !important; }
 
     .label-form { font-size: 0.75rem; font-weight: 700; color: #374151; margin-bottom: 0.25rem; display: block; }
     .checkbox-custom { width: 1.25rem; height: 1.25rem; border-radius: 0.25rem; border: 2px solid #cbd5e1; cursor: pointer; }
@@ -87,6 +83,13 @@
       .rab-paper { box-shadow: none; margin: 0; padding: 0; width: 100%; }
       main { overflow: visible !important; }
     }
+    
+    .loader {
+      border: 3px solid #f3f3f3; border-top: 3px solid #1e3a8a;
+      border-radius: 50%; width: 20px; height: 20px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
   </style>
 </head>
 <body class="flex flex-col h-screen overflow-hidden text-gray-800 antialiased bg-gray-50">
@@ -138,7 +141,8 @@
       
       <div class="flex items-center space-x-4">
         <div class="text-right">
-          <p class="text-xs font-bold uppercase text-white tracking-wide" id="displayRole">-</p>
+          <p class="text-[10px] font-bold uppercase text-blue-200 tracking-wide mb-0.5" id="displayBidangAtas">Unit Kerja</p>
+          <p class="text-xs font-bold uppercase text-white tracking-wide leading-none" id="displayNamaUser">-</p>
         </div>
         <button onclick="logout()" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm" title="Keluar">
           <i class="fas fa-power-off"></i>
@@ -153,6 +157,11 @@
         <span class="opacity-50">|</span>
       </div>
       <span><i class="fas fa-clock mr-1"></i> <span id="displayCountdown">Memeriksa jadwal...</span></span>
+    </div>
+
+    <!-- GLOBAL LOADER -->
+    <div id="globalLoader" class="hidden absolute top-20 left-1/2 transform -translate-x-1/2 bg-blue-50 text-blue-800 p-3 rounded-lg shadow-lg flex items-center justify-center z-50 border border-blue-200">
+        <div class="loader mr-3"></div> <span class="text-sm font-bold">Memuat data dari server...</span>
     </div>
 
     <div class="flex flex-1 overflow-hidden relative">
@@ -190,7 +199,7 @@
           <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h2 class="text-xl font-bold text-slate-800">Daftar Usulan Perencanaan</h2>
-              <p class="text-xs text-gray-500 font-medium" id="displayTahunAnggaranList">Tahun Anggaran 2026</p>
+              <p class="text-xs text-gray-500 font-medium" id="displayTahunAnggaranList">Tahun Anggaran -</p>
             </div>
             <div class="flex space-x-2" id="bidangActionButtons">
               <button onclick="kirimUsulan()" class="bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-700 transition flex items-center shadow-sm">
@@ -242,14 +251,33 @@
             </div>
           </div>
 
+          <!-- Interactive Charts Section -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6 no-print" id="chartsContainer">
+            <!-- Doughnut Chart: Status -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col items-center">
+                <h3 class="text-sm font-bold text-slate-800 mb-4 w-full text-left">Proporsi Anggaran berdasarkan Status</h3>
+                <div class="relative w-full h-64 flex justify-center">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+            <!-- Bar Chart: Sub Kegiatan / Unit Kerja -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col">
+                <h3 class="text-sm font-bold text-slate-800 mb-4 w-full text-left" id="barChartTitle">Distribusi Anggaran</h3>
+                <div class="relative w-full h-64">
+                    <canvas id="barChart"></canvas>
+                </div>
+            </div>
+          </div>
+
           <!-- Tabel Usulan -->
-          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mt-6">
             <div class="overflow-x-auto">
               <table class="w-full text-sm whitespace-nowrap md:whitespace-normal">
                 <thead class="bg-gray-50 text-gray-400 font-bold border-b text-[10px] uppercase tracking-wider">
                   <tr>
                     <th class="px-6 py-4 text-left w-24">Status</th>
-                    <th class="px-6 py-4 text-left">Bidang</th>
+                    <th class="px-6 py-4 text-left">Unit Kerja</th>
+                    <th class="px-6 py-4 text-left">Pengusul</th>
                     <th class="px-6 py-4 text-left w-1/3">Sub-Kegiatan</th>
                     <th class="px-6 py-4 text-right">Total Anggaran</th>
                     <th class="px-6 py-4 text-center">Aksi</th>
@@ -265,7 +293,6 @@
 
         <!-- ================= HALAMAN VERIFIKASI ADMIN ================= -->
         <div id="verifikasiView" class="hidden p-4 md:p-10 space-y-6">
-            <!-- Isi Verifikasi Tetap Sama -->
             <div class="max-w-6xl mx-auto space-y-6">
                 <!-- Header Info -->
                 <div class="flex items-center justify-between no-print">
@@ -282,7 +309,7 @@
                         <span id="verifTotalAnggaran">Rp 0</span>
                     </div>
                     <h2 class="text-xl font-black text-slate-800 mb-1" id="verifSubKegiatan">Nama Sub Kegiatan</h2>
-                    <p class="text-sm font-bold text-blue-600 mb-6 uppercase tracking-wide" id="verifBidang">Nama Bidang</p>
+                    <p class="text-sm font-bold text-blue-600 mb-6 uppercase tracking-wide" id="verifBidang">Nama Unit Kerja</p>
                     
                     <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm border-t border-gray-100 pt-4">
                         <div><p class="text-gray-500 text-xs font-bold mb-1">Target Output</p><p class="font-semibold text-gray-800" id="verifTarget">-</p></div>
@@ -343,7 +370,7 @@
             </div>
         </div>
 
-        <!-- ================= NEW RINCIAN VIEW: DAFTAR RINCIAN (PENGGANTI FORM PANJANG) ================= -->
+        <!-- ================= NEW RINCIAN VIEW: DAFTAR RINCIAN ================= -->
         <div id="rincianView" class="hidden p-4 md:p-10 space-y-6">
           <div class="max-w-6xl mx-auto space-y-6">
             
@@ -365,7 +392,15 @@
                <h2 class="text-xl font-black text-slate-800 mb-2 w-11/12" id="rincianViewTitle">Nama Sub Kegiatan</h2>
                <div class="flex flex-wrap items-center text-sm gap-4 text-gray-600 mb-4 border-b pb-4">
                   <div><span class="font-bold text-xs uppercase text-gray-400 block mb-0.5">Indikator</span> <span id="rincianViewIndikator" class="font-medium">-</span></div>
-                  <div><span class="font-bold text-xs uppercase text-gray-400 block mb-0.5">Target Output</span> <span id="rincianViewTarget" class="font-medium font-mono bg-gray-100 px-2 py-0.5 rounded">-</span></div>
+                  
+                  <!-- Area Target & Tombol Edit -->
+                  <div>
+                      <span class="font-bold text-xs uppercase text-gray-400 block mb-0.5">Target Output</span>
+                      <div class="flex items-center">
+                          <span id="rincianViewTarget" class="font-medium font-mono bg-gray-100 px-2 py-0.5 rounded">-</span>
+                          <button id="btnEditTarget" onclick="openEditTargetModal()" class="ml-2 text-blue-500 hover:text-blue-700 transition hidden" title="Edit Target Output"><i class="fas fa-edit"></i></button>
+                      </div>
+                  </div>
                </div>
                <div>
                   <span class="font-bold text-xs uppercase text-gray-400 block mb-1">Total Estimasi Anggaran Usulan</span>
@@ -410,7 +445,7 @@
               <div class="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
                   <div>
                       <h2 class="text-xl font-bold text-slate-800"><i class="fas fa-users-cog text-purple-600 mr-2"></i> Manajemen User</h2>
-                      <p class="text-sm text-gray-500 mt-1">Kelola akun akses untuk tiap bidang.</p>
+                      <p class="text-sm text-gray-500 mt-1">Kelola hak akses dan peran (level) untuk tiap user.</p>
                   </div>
                   <button onclick="openUserModal()" class="bg-purple-600 text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-purple-700 transition shadow-sm whitespace-nowrap">
                       <i class="fas fa-plus mr-2"></i> Tambah User
@@ -419,7 +454,7 @@
               <div class="overflow-x-auto border border-gray-100 rounded-xl">
                 <table class="w-full text-left text-sm whitespace-nowrap">
                   <thead class="bg-gray-50 border-b border-gray-100 text-gray-500 font-bold">
-                    <tr><th class="p-4">Username</th><th class="p-4">Password</th><th class="p-4">Bidang (Akses)</th><th class="p-4 text-center">Aksi</th></tr>
+                    <tr><th class="p-4">Username</th><th class="p-4">Nama Lengkap</th><th class="p-4">Password</th><th class="p-4">Level Akses</th><th class="p-4">Unit Kerja</th><th class="p-4 text-center">Aksi</th></tr>
                   </thead>
                   <tbody id="userTableBody" class="divide-y divide-gray-100 bg-white"></tbody>
                 </table>
@@ -438,7 +473,7 @@
               <div class="space-y-5">
                 <div>
                   <label class="label-form">Tahun Anggaran Perencanaan <span class="text-red-500">*</span></label>
-                  <input type="number" id="inputTahunAnggaran" class="form-input transition-colors font-bold text-blue-700" placeholder="Misal: 2026">
+                  <input type="number" min="2000" id="inputTahunAnggaran" oninput="if(this.value < 0) this.value = Math.abs(this.value);" class="form-input transition-colors font-bold text-blue-700" placeholder="Misal: 2026">
                 </div>
 
                 <div>
@@ -468,8 +503,8 @@
         <div id="rabView" class="hidden min-h-screen p-4 md:p-10">
           <div id="rabAdminControl" class="max-w-5xl mx-auto bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-200 mb-6 flex flex-col md:flex-row items-center justify-between gap-4 no-print hidden">
             <div class="flex flex-col md:flex-row md:items-center w-full gap-3">
-              <label class="font-bold text-sm text-gray-700 whitespace-nowrap"><i class="fas fa-filter text-blue-500 mr-2"></i>Filter RAB Bidang:</label>
-              <select id="selectRabBidang" onchange="generateRab()" class="form-input w-full md:w-64 text-sm font-semibold text-blue-900"><option value="ALL">Semua Bidang</option></select>
+              <label class="font-bold text-sm text-gray-700 whitespace-nowrap"><i class="fas fa-filter text-blue-500 mr-2"></i>Filter RAB Unit Kerja:</label>
+              <select id="selectRabBidang" onchange="generateRab()" class="form-input w-full md:w-64 text-sm font-semibold text-blue-900"><option value="ALL">Semua Unit Kerja</option></select>
             </div>
             <div class="flex gap-2 w-full md:w-auto mt-3 md:mt-0">
               <button onclick="exportToExcel()" class="bg-green-600 text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-green-700 transition flex items-center shadow-sm justify-center"><i class="fas fa-file-excel mr-2"></i> Excel</button>
@@ -517,7 +552,7 @@
   <div id="headerModal" class="fixed inset-0 bg-gray-900 bg-opacity-60 z-modal hidden flex items-center justify-center px-4 no-print transition-opacity" style="backdrop-filter: blur(4px);">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
       <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-        <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-folder-plus text-blue-600 mr-2"></i> Data Identitas Usulan (Header)</h3>
+        <h3 class="text-lg font-bold text-gray-800" id="headerModalTitleText"><i class="fas fa-folder-plus text-blue-600 mr-2"></i> Data Identitas Usulan (Header)</h3>
         <button onclick="closeHeaderModal()" class="text-gray-400 hover:text-red-500 transition focus:outline-none bg-white rounded-full p-2 hover:bg-red-50"><i class="fas fa-times"></i></button>
       </div>
       <div class="p-6 space-y-5 bg-white">
@@ -532,7 +567,7 @@
          <div class="grid grid-cols-2 gap-4">
             <div>
                <label class="label-form">Target Output <span class="text-red-500">*</span></label>
-               <input type="number" id="inputTarget" class="form-input font-bold text-blue-700" placeholder="Angka Target">
+               <input type="number" min="0" id="inputTarget" oninput="if(this.value < 0) this.value = Math.abs(this.value)" class="form-input font-bold text-blue-700" placeholder="Angka Target">
             </div>
             <div>
                <label class="label-form">Satuan Target</label>
@@ -542,7 +577,7 @@
       </div>
       <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end space-x-3">
         <button onclick="closeHeaderModal()" class="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-300 transition shadow-sm">Batal</button>
-        <button onclick="lanjutKeRincian()" class="px-6 py-2.5 bg-blue-700 text-white rounded-xl text-sm font-bold hover:bg-blue-800 transition shadow-sm flex items-center">Lanjut Isi Rincian <i class="fas fa-arrow-right ml-2"></i></button>
+        <button id="btnSubmitHeader" type="button" onclick="lanjutKeRincian()" class="px-6 py-2.5 bg-blue-700 text-white rounded-xl text-sm font-bold hover:bg-blue-800 transition shadow-sm flex items-center">Lanjut Isi Rincian <i class="fas fa-arrow-right ml-2"></i></button>
       </div>
     </div>
   </div>
@@ -586,16 +621,16 @@
          <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
             <label class="label-form mb-3">Koefisien / Volume <span class="text-red-500">*</span></label>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-               <div class="flex space-x-1"><input type="number" id="jml1" oninput="calculateSubTotal()" class="form-input w-1/3 text-center px-1" placeholder="Jml"><div class="w-2/3"><select id="sat1" placeholder="Satuan"></select></div></div>
-               <div class="flex space-x-1"><input type="number" id="jml2" oninput="calculateSubTotal()" class="form-input w-1/3 text-center px-1" placeholder="Jml"><div class="w-2/3"><select id="sat2" placeholder="Satuan"></select></div></div>
-               <div class="flex space-x-1"><input type="number" id="jml3" oninput="calculateSubTotal()" class="form-input w-1/3 text-center px-1" placeholder="Jml"><div class="w-2/3"><select id="sat3" placeholder="Satuan"></select></div></div>
-               <div class="flex space-x-1"><input type="number" id="jml4" oninput="calculateSubTotal()" class="form-input w-1/3 text-center px-1" placeholder="Jml"><div class="w-2/3"><select id="sat4" placeholder="Satuan"></select></div></div>
+               <div class="flex space-x-1"><input type="number" min="0" id="jml1" oninput="if(this.value < 0) this.value = Math.abs(this.value); calculateSubTotal()" class="form-input w-1/3 text-center px-1" placeholder="Jml"><div class="w-2/3"><select id="sat1" placeholder="Satuan"></select></div></div>
+               <div class="flex space-x-1"><input type="number" min="0" id="jml2" oninput="if(this.value < 0) this.value = Math.abs(this.value); calculateSubTotal()" class="form-input w-1/3 text-center px-1" placeholder="Jml"><div class="w-2/3"><select id="sat2" placeholder="Satuan"></select></div></div>
+               <div class="flex space-x-1"><input type="number" min="0" id="jml3" oninput="if(this.value < 0) this.value = Math.abs(this.value); calculateSubTotal()" class="form-input w-1/3 text-center px-1" placeholder="Jml"><div class="w-2/3"><select id="sat3" placeholder="Satuan"></select></div></div>
+               <div class="flex space-x-1"><input type="number" min="0" id="jml4" oninput="if(this.value < 0) this.value = Math.abs(this.value); calculateSubTotal()" class="form-input w-1/3 text-center px-1" placeholder="Jml"><div class="w-2/3"><select id="sat4" placeholder="Satuan"></select></div></div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-5 items-end">
                <div>
                   <label class="label-form">Harga Satuan (Rp) <span class="text-red-500">*</span></label>
-                  <input type="number" id="hargaSatuan" oninput="calculateSubTotal()" class="form-input font-bold" placeholder="Harga Satuan">
+                  <input type="number" min="0" id="hargaSatuan" oninput="if(this.value < 0) this.value = Math.abs(this.value); calculateSubTotal()" class="form-input font-bold" placeholder="Harga Satuan">
                </div>
                <div>
                   <label class="label-form text-gray-500">Sub Total Estimasi (Rp)</label>
@@ -621,8 +656,17 @@
       <h3 id="userModalTitle" class="text-lg font-bold text-gray-800 mb-4 border-b pb-3">Tambah User</h3>
       <div class="space-y-4">
         <div><label class="label-form">Username</label><input type="text" id="formUsername" class="form-input"></div>
+        <div><label class="label-form">Nama Lengkap</label><input type="text" id="formNamaLengkap" class="form-input" placeholder="Masukkan nama pemilik akun"></div>
         <div><label class="label-form">Password</label><input type="text" id="formPassword" class="form-input"></div>
-        <div><label class="label-form">Akses Bidang</label><select id="formBidang" class="form-input"><option value="">-- Pilih --</option><option value="Admin Verifikator">Admin Verifikator</option></select></div>
+        <div>
+            <label class="label-form">Level Akses</label>
+            <select id="formLevel" class="form-input">
+                <option value="Level Program">Level Program</option>
+                <option value="Level Bidang">Level Bidang</option>
+                <option value="Admin Verifikator">Admin Verifikator</option>
+            </select>
+        </div>
+        <div><label class="label-form">Unit Kerja</label><select id="formBidang" class="form-input"><option value="">-- Pilih --</option></select></div>
       </div>
       <div class="flex justify-end mt-8 space-x-3">
         <button onclick="closeUserModal()" class="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-bold hover:bg-gray-200">Batal</button>
@@ -685,7 +729,10 @@
   <script>
     // Global State
     const bidangList = ["Dalduk", "KB dan KS", "Keuangan dan Aset", "P2P", "Perencanaan", "Umum Kepegawaian dan Hukum", "Yankesmas dan Farmalkes"];
-    let currentRole = ""; 
+    let currentBidang = ""; 
+    let currentUser = "";
+    let currentLevel = "";
+    let currentNama = "";
     
     // Proposal State
     let currentHeaderInfo = {}; // Menyimpan data header usulan yang sedang aktif
@@ -693,6 +740,7 @@
     let editingDraftId = null; 
     let editingRincianIndex = null; // Menyimpan index rincian yang sedang diedit (-1 berarti tambah baru)
     let proposalToDeleteId = null;
+    let isEditingTargetOnly = false; // Flag khusus edit target angka
     
     // DB State
     let allData = [];     
@@ -719,17 +767,34 @@
     let tsSatuan = [null, null, null, null];
     let defaultTahapanList = ["APBD Murni", "Pergeseran 1", "Pergeseran 2", "APBD Perubahan"];
 
-    const formatRp = (angka) => "Rp " + Math.round(angka).toLocaleString('id-ID');
+    // Chart instances
+    let statusChartInstance = null;
+    let barChartInstance = null;
 
-    // UTILS
+    // UTILS SAFETY
+    // Mencegah error perhitungan akibat tipe data string (teks) dari Google Sheets
+    const safeNum = (val) => {
+        if (!val) return 0;
+        if (typeof val === 'number') return val;
+        const str = String(val);
+        const num = Number(str.replace(/[^0-9]/g, ''));
+        return str.includes('-') ? -num : num;
+    };
+
+    const formatRp = (angka) => "Rp " + Math.round(safeNum(angka)).toLocaleString('id-ID');
+
+    function checkIsAdmin() {
+        return currentLevel === 'Admin Verifikator' || currentBidang === 'Admin Verifikator';
+    }
+
     function showModalNotif(title, msg) {
         document.getElementById('alertModalTitle').innerText = title;
         document.getElementById('alertModalMessage').innerText = msg;
         document.getElementById('alertModal').classList.remove('hidden');
     }
+    
     function closeAlertModal() { document.getElementById('alertModal').classList.add('hidden'); }
 
-    // FUNGSI BARU: Menutup semua modal yang aktif (mencegah modal mengambang saat logout/sesi habis)
     function closeAllModals() {
         const modalIds = ['headerModal', 'rincianModal', 'userModal', 'logoutModal', 'deleteModal', 'kirimModal', 'alertModal'];
         modalIds.forEach(id => {
@@ -747,14 +812,15 @@
       setTimeout(() => { t.classList.add('translate-y-10', 'opacity-0'); setTimeout(() => t.remove(), 300); }, 3000);
     }
 
-    // MANAJEMEN USER (tetap sama)
+    // MANAJEMEN USER
     function initUserForm() {
         const select = document.getElementById('formBidang'); if (!select) return;
         bidangList.forEach(b => { const opt = document.createElement('option'); opt.value = b; opt.text = b; select.appendChild(opt); });
     }
+    
     function fetchUsers() {
         const tbody = document.getElementById('userTableBody'); if (!tbody) return;
-        tbody.innerHTML = '<tr><td colspan="4" class="p-6 text-center italic text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i> Memuat...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center italic text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i> Memuat...</td></tr>';
         if (typeof google !== 'undefined' && google.script) {
             google.script.run
                 .withSuccessHandler(data => { userData = data || []; renderUserTable(); })
@@ -762,41 +828,72 @@
                 .getUsers();
         }
     }
+    
     function renderUserTable() {
         const tbody = document.getElementById('userTableBody'); if (!tbody) return;
-        tbody.innerHTML = userData.map(u => `
-            <tr class="hover:bg-purple-50 transition">
-                <td class="p-4 font-semibold text-gray-800">${u.username}</td>
-                <td class="p-4 text-gray-500 font-mono text-xs">${u.password}</td>
-                <td class="p-4"><span class="bg-purple-100 text-purple-700 px-3 py-1.5 rounded-lg text-xs font-bold">${u.bidang}</span></td>
-                <td class="p-4 text-center">
-                    <button onclick="editUser('${u.username}')" class="text-blue-500 mr-3"><i class="fas fa-edit"></i></button>
-                    <button onclick="deleteUser('${u.username}')" class="text-red-500"><i class="fas fa-trash"></i></button>
+        tbody.innerHTML = userData.map(u => {
+            let levelLabel = u.Level_Akses || 'Level Program';
+            if(levelLabel === 'Pengelola Program') levelLabel = 'Level Program'; 
+            if(levelLabel === 'Kepala Bidang') levelLabel = 'Level Bidang';
+            
+            let levelColor = levelLabel === 'Admin Verifikator' ? 'bg-red-100 text-red-700' : (levelLabel === 'Level Bidang' ? 'bg-indigo-100 text-indigo-700' : 'bg-blue-100 text-blue-700');
+            
+            return `
+            <tr class="hover:bg-purple-50 transition border-b border-gray-100">
+                <td class="p-4 font-semibold text-gray-800">${u.Username}</td>
+                <td class="p-4 text-gray-700 font-medium">${u.Nama || '-'}</td>
+                <td class="p-4 text-gray-500 font-mono text-xs">${u.Password}</td>
+                <td class="p-4"><span class="${levelColor} px-3 py-1.5 rounded-lg text-xs font-bold">${levelLabel}</span></td>
+                <td class="p-4"><span class="bg-purple-100 text-purple-700 px-3 py-1.5 rounded-lg text-xs font-bold">${u.Bidang}</span></td>
+                <td class="p-4 text-center whitespace-nowrap">
+                    <button onclick="editUser('${u.Username}')" class="text-blue-500 mr-3"><i class="fas fa-edit"></i></button>
+                    <button onclick="deleteUser('${u.Username}')" class="text-red-500"><i class="fas fa-trash"></i></button>
                 </td>
-            </tr>`).join('');
+            </tr>`;
+        }).join('');
     }
+    
     function openUserModal() {
         editingUserOldUsername = null; document.getElementById('userModalTitle').innerText = "Tambah User";
-        ['formUsername','formPassword','formBidang'].forEach(id => document.getElementById(id).value = "");
+        ['formUsername', 'formNamaLengkap', 'formPassword', 'formBidang'].forEach(id => document.getElementById(id).value = "");
+        document.getElementById('formLevel').value = "Level Program";
         document.getElementById('userModal').classList.remove('hidden');
     }
+    
     function editUser(username) {
-        const u = userData.find(x => x.username === username); if(!u) return;
+        const u = userData.find(x => x.Username === username); if(!u) return;
         editingUserOldUsername = username; document.getElementById('userModalTitle').innerText = "Edit User";
-        document.getElementById('formUsername').value = u.username; document.getElementById('formPassword').value = u.password; document.getElementById('formBidang').value = u.bidang;
+        document.getElementById('formUsername').value = u.Username; 
+        document.getElementById('formNamaLengkap').value = u.Nama || ""; 
+        document.getElementById('formPassword').value = u.Password; 
+        
+        let levelVal = u.Level_Akses || "Level Program";
+        if(levelVal === 'Pengelola Program') levelVal = "Level Program";
+        if(levelVal === 'Kepala Bidang') levelVal = "Level Bidang";
+        document.getElementById('formLevel').value = levelVal;
+        
+        document.getElementById('formBidang').value = u.Bidang;
         document.getElementById('userModal').classList.remove('hidden');
     }
+    
     function closeUserModal() { document.getElementById('userModal').classList.add('hidden'); }
+    
     function submitUser() {
-        const u = document.getElementById('formUsername').value.trim(), p = document.getElementById('formPassword').value.trim(), b = document.getElementById('formBidang').value;
-        if(!u || !p || !b) return showToast("Lengkapi data!", "error");
+        const u = document.getElementById('formUsername').value.trim(), 
+              n = document.getElementById('formNamaLengkap').value.trim(),
+              p = document.getElementById('formPassword').value.trim(), 
+              l = document.getElementById('formLevel').value,
+              b = document.getElementById('formBidang').value;
+        if(!u || !p || !b || !l || !n) return showToast("Lengkapi semua data (termasuk nama)!", "error");
+        
         if (typeof google !== 'undefined' && google.script) {
             google.script.run
                 .withSuccessHandler(res => { showToast(res.message); fetchUsers(); closeUserModal(); })
                 .withFailureHandler(err => { showToast("Gagal menyimpan user: " + err.message, "error"); })
-                .saveUser(editingUserOldUsername, u, p, b);
+                .saveUser(editingUserOldUsername, u, n, p, b, l);
         }
     }
+    
     function deleteUser(username) {
         if(!confirm("Hapus user " + username + "?")) return;
         if (typeof google !== 'undefined' && google.script) {
@@ -807,14 +904,36 @@
         }
     }
 
-    // JADWAL & COUNTDOWN (tetap sama)
+    // JADWAL & COUNTDOWN
     function setupTahapanDropdown() {
-        const sel = document.getElementById('inputTahapan'); if (tsTahapan) tsTahapan.destroy();
+        const sel = document.getElementById('inputTahapan'); 
+        if(!sel) return;
+        
+        if (tsTahapan) { 
+            tsTahapan.destroy(); 
+            tsTahapan = null; 
+        }
+        
         sel.innerHTML = '<option value="">-- Pilih atau Ketik Baru --</option>';
-        defaultTahapanList.forEach(t => { const opt = document.createElement('option'); opt.value = t; opt.text = t; sel.appendChild(opt); });
-        tsTahapan = new TomSelect(sel, { create: true, placeholder: "Pilih jadwal..." });
-        if(sistemTahapan) tsTahapan.setValue(sistemTahapan);
+        
+        defaultTahapanList.forEach(t => { 
+            sel.add(new Option(t, t)); 
+        });
+        
+        if (sistemTahapan && sistemTahapan !== "Belum Diatur" && !defaultTahapanList.includes(sistemTahapan)) {
+            sel.add(new Option(sistemTahapan, sistemTahapan));
+        }
+        
+        tsTahapan = new TomSelect(sel, { 
+            create: true, 
+            placeholder: "Pilih atau Ketik Tahapan Baru..." 
+        });
+        
+        if(sistemTahapan && sistemTahapan !== "Belum Diatur") {
+            tsTahapan.setValue(sistemTahapan);
+        }
     }
+    
     function togglePengaturanUI(isLocked) {
         const items = ['inputDeadline', 'inputTahunAnggaran'];
         items.forEach(id => { const el = document.getElementById(id); if(el) el.disabled = isLocked; });
@@ -824,7 +943,7 @@
     }
     
     function simpanPengaturan() {
-        const tahapan = tsTahapan.getValue();
+        const tahapan = tsTahapan ? tsTahapan.getValue() : document.getElementById('inputTahapan').value;
         let deadline = document.getElementById('inputDeadline').value;
         const tahun = document.getElementById('inputTahunAnggaran').value;
         
@@ -844,16 +963,16 @@
         if (typeof google !== 'undefined' && google.script) {
             showToast("Menyimpan jadwal ke database...");
             google.script.run
-                .withSuccessHandler(res => { showToast(res.message); })
+                .withSuccessHandler(res => { 
+                    if(res && res.message) { showToast(res.message); } 
+                })
                 .withFailureHandler(err => { showToast("Gagal menyimpan jadwal: " + err.message, "error"); })
                 .savePengaturanSistem(tahapan, deadlineToSave, tahun);
-        } else {
-            showToast("Jadwal disimpan (Simulasi).");
         }
     }
 
     function hentikanTimer() {
-        if(!confirm("Hentikan jadwal aktif? (Akses input bidang akan ditutup)")) return;
+        if(!confirm("Hentikan jadwal aktif? (Akses input unit kerja akan ditutup)")) return;
         sistemDeadline = ""; document.getElementById('inputDeadline').value = ""; startCountdown();
 
         if (typeof google !== 'undefined' && google.script) {
@@ -862,7 +981,7 @@
                 .withSuccessHandler(res => { showToast("Jadwal berhasil dihentikan."); })
                 .withFailureHandler(err => { showToast("Gagal menghentikan jadwal: " + err.message, "error"); })
                 .savePengaturanSistem(sistemTahapan, "", sistemTahunAnggaran);
-        } else { showToast("Jadwal dihentikan (Simulasi)."); }
+        }
     }
 
     function startCountdown() {
@@ -901,7 +1020,7 @@
       countdownInterval = setInterval(update, 1000);
     }
 
-    // AUTH & SESSION (tetap sama)
+    // AUTH & SESSION
     function processLogin(e) {
         e.preventDefault();
         const u = document.getElementById('loginUsername').value.trim(), p = document.getElementById('loginPassword').value, btn = document.getElementById('btnSubmitLogin');
@@ -909,56 +1028,100 @@
         if (typeof google !== 'undefined' && google.script) {
             google.script.run
                 .withSuccessHandler(res => {
-                    btn.disabled = false; btn.innerHTML = 'Masuk';
-                    if (res.success) {
-                        currentRole = res.role; setSession(currentRole); 
+                    btn.disabled = false; btn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i> Masuk ke Sistem';
+                    if (res && res.status === 'success') {
+                        currentBidang = res.bidang; 
+                        currentUser = res.username;
+                        currentNama = res.nama || res.username; 
+                        
+                        let lvl = res.level || "Level Program";
+                        if (res.bidang === 'Admin Verifikator') lvl = "Admin Verifikator"; // Bypass data lama
+                        if(lvl === 'Pengelola Program') lvl = "Level Program";
+                        if(lvl === 'Kepala Bidang') lvl = "Level Bidang";
+                        currentLevel = lvl;
+                        
+                        setSession(currentBidang, currentUser, currentLevel, currentNama); 
+                        
                         document.getElementById('loginView').classList.add('hidden'); document.getElementById('appContainer').classList.remove('hidden');
-                        updateRoleUI(); switchView('listView'); startSessionMonitor();
-                    } else showToast(res.message, "error");
+                        updateRoleUI(); 
+                        switchView('listView'); 
+                        startSessionMonitor();
+                        
+                        // Menarik data ulang dari database khusus untuk pengguna yang baru login
+                        refreshAllData();
+                        
+                        showToast("Anda telah berhasil login.");
+                    } else showToast((res && res.message ? res.message : "Error"), "error");
                 })
                 .withFailureHandler(err => {
-                    btn.disabled = false; btn.innerHTML = 'Masuk'; showToast("Login gagal. Error server: " + err.message, "error");
+                    btn.disabled = false; btn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i> Masuk ke Sistem'; showToast("Login gagal. Error server: " + err.message, "error");
                 })
                 .verifyLogin(u, p);
-        } else {
-            setTimeout(() => {
-                btn.disabled = false; btn.innerHTML = 'Masuk';
-                currentRole = u === 'admin' ? "Admin Verifikator" : "Dalduk"; setSession(currentRole); 
-                document.getElementById('loginView').classList.add('hidden'); document.getElementById('appContainer').classList.remove('hidden');
-                updateRoleUI(); switchView('listView'); startSessionMonitor();
-            }, 500);
         }
     }
+    
     function logout() { document.getElementById('logoutModal').classList.remove('hidden'); }
     function closeLogoutModal() { document.getElementById('logoutModal').classList.add('hidden'); }
     
     function confirmLogout() { 
         closeAllModals(); // Memastikan semua jendela pop-up tertutup saat logout
-        currentRole = ""; localStorage.removeItem('eplan_session'); 
+        currentBidang = ""; currentUser = ""; currentLevel = ""; currentNama = ""; 
+        
+        // KOSONGKAN SEMUA DATA DI MEMORI FRONTEND SAAT LOGOUT (Solusi agar tidak bocor)
+        allData = []; 
+        allRincian = []; 
+        tempRincian = [];
+        const tableBody = document.getElementById('tableBody');
+        if(tableBody) tableBody.innerHTML = '';
+        
+        // Kosongkan ulang tampilan dashboard (Optional)
+        document.getElementById('dashTotalUsulan').innerText = '0';
+        document.getElementById('dashTotalAnggaran').innerText = 'Rp 0';
+        document.getElementById('dashDisetujui').innerText = '0';
+        document.getElementById('dashProses').innerText = '0';
+
+        if (statusChartInstance) statusChartInstance.destroy();
+        if (barChartInstance) barChartInstance.destroy();
+
+        localStorage.removeItem('eplan_session'); 
         if (sessionCheckInterval) clearInterval(sessionCheckInterval);
         document.getElementById('appContainer').classList.add('hidden'); 
         document.getElementById('loginView').classList.remove('hidden');
         document.getElementById('loginPassword').value = ''; showToast("Anda telah berhasil keluar.");
     }
     
-    function setSession(r) { localStorage.setItem('eplan_session', JSON.stringify({ role: r, timestamp: Date.now() })); }
-    function getSession() {
-        const d = localStorage.getItem('eplan_session'); if(!d) return null;
-        const p = JSON.parse(d); if(Date.now() - p.timestamp > SESSION_TIMEOUT) { localStorage.removeItem('eplan_session'); return null; }
-        return p.role;
+    function setSession(bidang, username, level, nama) { 
+        localStorage.setItem('eplan_session', JSON.stringify({ bidang: bidang, username: username, level: level, nama: nama, timestamp: Date.now() })); 
     }
+    
+    function getSession() {
+        try {
+            const d = localStorage.getItem('eplan_session'); if(!d) return null;
+            const p = JSON.parse(d); 
+            if (!p || !p.timestamp || (Date.now() - p.timestamp > SESSION_TIMEOUT)) { 
+                localStorage.removeItem('eplan_session'); return null; 
+            }
+            if (p.bidang === 'Admin Verifikator') p.level = 'Admin Verifikator'; // Safety Check Data Lama
+            return p;
+        } catch(e) {
+            localStorage.removeItem('eplan_session'); return null;
+        }
+    }
+    
     function updateRoleUI() {
-      const isAdmin = currentRole.toLowerCase().includes("admin") || currentRole.toLowerCase().includes("verifikator");
-      document.getElementById('displayRole').innerText = currentRole;
+      const isAdmin = checkIsAdmin();
+      document.getElementById('displayBidangAtas').innerText = currentBidang || "Unit Kerja";
+      document.getElementById('displayNamaUser').innerText = currentNama || currentUser || "-";
+      
       document.getElementById('adminMenuSection').classList.toggle('hidden', !isAdmin);
-      document.getElementById('btnNavForm').classList.toggle('hidden', isAdmin); // Tombol buat usulan di sidebar
+      // Tombol buat usulan bisa diakses Pengelola dan Kabid
+      document.getElementById('btnNavForm').classList.toggle('hidden', isAdmin);
       document.getElementById('bidangActionButtons').classList.toggle('hidden', isAdmin);
       loadData();
     }
 
     // NAVIGATION
     function switchView(id) {
-      // Hapus verifikasi formView lama karena diganti rincianView/modals
       ['listView', 'rincianView', 'rabView', 'pengaturanView', 'userView', 'verifikasiView'].forEach(v => {
           const el = document.getElementById(v); if(el) el.classList.add('hidden');
       });
@@ -981,25 +1144,51 @@
     }
 
     // =========================================================================
-    // LOGIKA BARU: HEADER DAN RINCIAN (POP UP & LIST)
+    // LOGIKA INTEGRASI: HEADER DAN RINCIAN (POP UP & LIST)
     // =========================================================================
 
     // 1. HEADER USULAN (BUAT BARU / EDIT HEADER)
     function openHeaderModal() {
-        const isAdmin = currentRole.toLowerCase().includes("admin") || currentRole.toLowerCase().includes("verifikator");
+        const isAdmin = checkIsAdmin();
         if (!isScheduleActive && !isAdmin) { return showModalNotif("Akses Terkunci", "Maaf, jadwal pengajuan belum dibuka atau telah berakhir."); }
 
         editingDraftId = null; 
         currentHeaderInfo = { Status: 'DRAFT' };
+        isEditingTargetOnly = false;
         
         // Reset form
-        if(tsSubKegiatan) tsSubKegiatan.clear();
+        if(tsSubKegiatan) {
+            tsSubKegiatan.enable();
+            tsSubKegiatan.clear();
+        }
         document.getElementById('inputTarget').value = '';
         document.getElementById('inputIndikator').value = '';
         document.getElementById('inputTargetSatuan').value = '';
         
+        document.getElementById('headerModalTitleText').innerHTML = '<i class="fas fa-folder-plus text-blue-600 mr-2"></i> Data Identitas Usulan (Header)';
+        document.getElementById('btnSubmitHeader').innerHTML = 'Lanjut Isi Rincian <i class="fas fa-arrow-right ml-2"></i>';
+        
         document.getElementById('headerModal').classList.remove('hidden');
         setTimeout(() => { if(tsSubKegiatan) tsSubKegiatan.sync(); }, 50);
+    }
+    
+    // FUNGSI BARU KHUSUS UNTUK EDIT TARGET SAJA (Dari Rincian View)
+    function openEditTargetModal() {
+        isEditingTargetOnly = true;
+        document.getElementById('headerModalTitleText').innerHTML = '<i class="fas fa-edit text-blue-600 mr-2"></i> Edit Target Output Usulan';
+        document.getElementById('btnSubmitHeader').innerHTML = '<i class="fas fa-save mr-2"></i> Simpan Target';
+        
+        if(tsSubKegiatan) {
+            tsSubKegiatan.setValue(currentHeaderInfo.Sub_Kegiatan);
+            tsSubKegiatan.disable(); // Kunci Dropdown agar tidak bisa diubah
+        }
+        document.getElementById('inputIndikator').value = currentHeaderInfo.Indikator || '';
+        
+        let targetParts = (currentHeaderInfo.Target || "").trim().split(" ");
+        document.getElementById('inputTarget').value = targetParts[0] || '';
+        document.getElementById('inputTargetSatuan').value = targetParts.slice(1).join(" ") || '';
+        
+        document.getElementById('headerModal').classList.remove('hidden');
     }
 
     function closeHeaderModal() {
@@ -1014,13 +1203,25 @@
         
         if(!sk || !targetNum) return showToast("Lengkapi Sub Kegiatan dan Target!", "error");
         
+        if (isEditingTargetOnly) {
+            // Update khusus hanya untuk target pada draft aktif tanpa reset rincian
+            currentHeaderInfo.Target = targetNum + " " + targetSatuan;
+            closeHeaderModal();
+            renderRincianView();
+            showToast("Target angka berhasil diubah! (Klik Simpan Draft untuk mempermanenkan)");
+            return;
+        }
+        
+        // KEY PAYLOAD HARUS SESUAI COLUMN_MAP (BUAT BARU)
         currentHeaderInfo = {
-            ID_Usulan: editingDraftId, // Null jika baru
-            Bidang: currentRole,
+            ID_Usulan: editingDraftId || "",
+            Bidang: currentBidang,
+            Pembuat: currentUser, // Tracking ownership
             Sub_Kegiatan: sk,
             Target: targetNum + " " + targetSatuan,
             Indikator: indikatorVal,
-            Status: currentHeaderInfo.Status || 'DRAFT'
+            Status: currentHeaderInfo.Status || 'DRAFT',
+            Total_Anggaran: 0
         };
 
         if(!editingDraftId) { tempRincian = []; } // Jika usulan baru, rincian kosong
@@ -1034,9 +1235,9 @@
     function openRincianView(idUsulan) {
         const header = allData.find(d => d.ID_Usulan === idUsulan); if(!header) return;
         editingDraftId = idUsulan;
-        currentHeaderInfo = { ...header };
+        currentHeaderInfo = Object.assign({}, header);
         
-        // Tarik data rincian dari allRincian ke tempRincian
+        // Tarik data rincian dari array global
         const items = allRincian.filter(r => r.ID_Usulan === idUsulan); 
         tempRincian = JSON.parse(JSON.stringify(items)); 
         
@@ -1058,12 +1259,16 @@
                           (currentHeaderInfo.Status === 'KOREKSI' ? 'bg-orange-500' : 'bg-gray-500')));
 
         // Evaluasi Kunci (Enable/Disable Aksi)
-        const isAdmin = currentRole.toLowerCase().includes("admin") || currentRole.toLowerCase().includes("verifikator");
+        const isAdmin = checkIsAdmin();
         // Boleh edit jika dia bukan admin, jadwal aktif (atau admin diabaikan), dan status Draft/Koreksi
         const isEditable = !isAdmin && (isScheduleActive || isAdmin) && (currentHeaderInfo.Status === 'DRAFT' || currentHeaderInfo.Status === 'KOREKSI');
 
         document.getElementById('btnTambahRincian').classList.toggle('hidden', !isEditable);
         document.getElementById('rincianSaveWrapper').classList.toggle('hidden', !isEditable);
+        
+        // Atur kemunculan tombol edit pensil pada blok Target Header
+        const targetEditBtn = document.getElementById('btnEditTarget');
+        if(targetEditBtn) targetEditBtn.classList.toggle('hidden', !isEditable);
 
         // Render Table
         const tbody = document.getElementById('rincianTableBody');
@@ -1073,33 +1278,60 @@
             tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-400 italic font-medium">Belum ada rincian belanja. Silakan tambah rincian.</td></tr>`;
         } else {
             tbody.innerHTML = tempRincian.map((it, idx) => {
-                total += it.Sub_Total;
+                const subTotalItem = safeNum(it.Sub_Total);
+                const hargaSatuanItem = safeNum(it.Harga_Satuan);
+                total += subTotalItem;
                 
-                // Cari Nama Rekening
-                const rek = allRekening.find(r => r.kode === it.Kode_Rekening);
-                const namaRekening = rek ? rek.nama : "-";
+                // Cari Nama Rekening berdasarkan Kode Rekening dengan pembersihan spasi
+                const rek = allRekening.find(r => String(r.Kode_Rekening).trim() === String(it.Kode_Rekening).trim());
+                const namaRekening = rek ? rek.Nama_Rekening : "Rekening Tidak Ditemukan";
 
-                // Format sesuai Image 2
+                const isKoreksi = it.Status_Item === 'KOREKSI';
+                const isDisetujui = it.Status_Item === 'DISETUJUI';
+                
+                let statusBadge = "";
+                if (isKoreksi) {
+                    statusBadge = `<span class="bg-red-100 text-red-700 text-[10px] px-2 py-0.5 rounded font-bold border border-red-200 inline-flex items-center"><i class="fas fa-exclamation-triangle mr-1"></i> Perlu Koreksi</span>`;
+                } else if (isDisetujui) {
+                    statusBadge = `<span class="bg-green-100 text-green-700 text-[10px] px-2 py-0.5 rounded font-bold border border-green-200 inline-flex items-center"><i class="fas fa-check-circle mr-1"></i> Disetujui</span>`;
+                }
+
+                let catatanBox = "";
+                if (isKoreksi && it.Catatan) {
+                    catatanBox = `<div class="mt-2 p-2 bg-red-50 border border-red-200 text-xs text-red-700 rounded-lg flex items-start"><i class="fas fa-comment-dots mt-0.5 mr-2"></i> <div><b>Catatan Admin:</b><br>${it.Catatan}</div></div>`;
+                }
+
+                let rowClasses = isKoreksi ? "border-b bg-red-50/40 hover:bg-red-50 transition" : "border-b hover:bg-blue-50/50 transition";
+
                 return `
-                <tr class="border-b hover:bg-blue-50/50 transition">
-                    <td class="p-4 text-center font-bold text-gray-400">${idx+1}</td>
+                <tr class="${rowClasses}">
+                    <td class="p-4 text-center font-bold ${isKoreksi ? 'text-red-400' : 'text-gray-400'}">${idx+1}</td>
                     <td class="p-4 min-w-[250px] whitespace-normal">
-                        <div class="font-bold text-blue-800 text-xs mb-1">[ # ] ${it.Sumber_Dana}</div>
-                        <div class="ml-4 text-sm font-semibold text-gray-800">[ - ] ${it.Komponen} <br><span class="text-xs text-gray-500 font-normal italic">${it.Spesifikasi}</span></div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <div class="font-bold text-blue-800 text-xs">[ # ] ${it.Sumber_Dana}</div>
+                            ${statusBadge}
+                        </div>
+                        <div class="ml-4 text-sm font-semibold ${isKoreksi ? 'text-red-800' : 'text-gray-800'}">[ - ] ${it.Keterangan || 'Tanpa Keterangan'} <br><span class="text-xs text-gray-500 font-normal italic">${it.Komponen}${it.Spesifikasi ? ' - ' + it.Spesifikasi : ''}</span></div>
                         <div class="ml-4 mt-1.5 text-[10px] text-gray-500 font-mono bg-gray-100 px-2 py-1 rounded inline-block"><i class="fas fa-wallet mr-1"></i> ${it.Kode_Rekening} - ${namaRekening}</div>
+                        ${catatanBox}
                     </td>
                     <td class="p-4 text-center">
                         <span class="font-bold text-gray-800">${it.Volume}</span><br>
                         <span class="text-[10px] text-gray-400">${it.Koefisien}</span>
                     </td>
-                    <td class="p-4 text-right font-medium text-gray-600">${it.Harga_Satuan.toLocaleString('id-ID')}</td>
-                    <td class="p-4 text-right font-black text-blue-700">${it.Sub_Total.toLocaleString('id-ID')}</td>
+                    <td class="p-4 text-right font-medium text-gray-600">${hargaSatuanItem.toLocaleString('id-ID')}</td>
+                    <td class="p-4 text-right font-black text-blue-700">${subTotalItem.toLocaleString('id-ID')}</td>
                     <td class="p-4 text-center whitespace-nowrap">
                         <button onclick="openRincianModal('VIEW', ${idx})" class="text-indigo-500 mx-1 bg-indigo-50 p-2 rounded hover:bg-indigo-100 transition" title="Lihat Rincian"><i class="fas fa-search"></i></button>
-                        ${isEditable ? `
-                        <button onclick="openRincianModal('EDIT', ${idx})" class="text-blue-500 mx-1 bg-blue-50 p-2 rounded hover:bg-blue-100 transition" title="Edit"><i class="fas fa-pencil-alt"></i></button>
-                        <button onclick="hapusRincianTemp(${idx})" class="text-red-500 mx-1 bg-red-50 p-2 rounded hover:bg-red-100 transition" title="Hapus"><i class="fas fa-trash-alt"></i></button>
-                        ` : ''}
+                        ${isEditable ? (
+                            isDisetujui ? `
+                            <button disabled class="text-gray-400 mx-1 bg-gray-50 p-2 rounded opacity-50 cursor-not-allowed" title="Terkunci (Sudah Disetujui)"><i class="fas fa-pencil-alt"></i></button>
+                            <button disabled class="text-gray-400 mx-1 bg-gray-50 p-2 rounded opacity-50 cursor-not-allowed" title="Terkunci (Sudah Disetujui)"><i class="fas fa-trash-alt"></i></button>
+                            ` : `
+                            <button onclick="openRincianModal('EDIT', ${idx})" class="text-blue-500 mx-1 bg-blue-50 p-2 rounded hover:bg-blue-100 transition" title="Edit"><i class="fas fa-pencil-alt"></i></button>
+                            <button onclick="hapusRincianTemp(${idx})" class="text-red-500 mx-1 bg-red-50 p-2 rounded hover:bg-red-100 transition" title="Hapus"><i class="fas fa-trash-alt"></i></button>
+                            `
+                        ) : ''}
                     </td>
                 </tr>
                 `;
@@ -1117,10 +1349,8 @@
         const btnSimpan = document.getElementById('btnSimpanRincian');
         const btnBatal = document.getElementById('btnBatalRincian');
         
-        // Elements array untuk disabled/enabled toggle
         const formElements = ['inputKomponen', 'inputSpesifikasi', 'inputKeterangan', 'hargaSatuan', 'jml1', 'jml2', 'jml3', 'jml4'];
 
-        // Helper untuk set state
         const setFieldState = (isDisabled) => {
             formElements.forEach(id => { document.getElementById(id).disabled = isDisabled; });
             if (tsSumberDana) isDisabled ? tsSumberDana.disable() : tsSumberDana.enable();
@@ -1132,7 +1362,6 @@
 
         if (mode === 'NEW') {
             title.innerHTML = '<i class="fas fa-plus text-blue-600 mr-2"></i> Tambah Rincian Baru';
-            // Reset Fields
             if(tsSumberDana) tsSumberDana.clear();
             if(tsRekening) tsRekening.clear();
             tsSatuan.forEach(ts => { if(ts) ts.clear(); });
@@ -1150,18 +1379,18 @@
                 document.getElementById('inputKomponen').value = it.Komponen;
                 document.getElementById('inputSpesifikasi').value = it.Spesifikasi;
                 document.getElementById('inputKeterangan').value = it.Keterangan;
-                document.getElementById('hargaSatuan').value = it.Harga_Satuan;
+                document.getElementById('hargaSatuan').value = safeNum(it.Harga_Satuan);
                 
-                // Parse Koefisien kembali ke input JML dan Satuan
+                // Parse Koefisien
                 tsSatuan.forEach(ts => { if(ts) ts.clear(); });
                 [1,2,3,4].forEach(i => { document.getElementById('jml'+i).value = ''; });
                 
                 let koefParts = it.Koefisien.split(' x ');
                 koefParts.forEach((part, i) => {
                     if (i < 4) {
-                        let num = parseFloat(part);
-                        let text = part.replace(/[0-9.]/g, '').trim();
-                        document.getElementById('jml'+(i+1)).value = isNaN(num) ? '' : num;
+                        let num = safeNum(part); // Mengambil hanya angkanya
+                        let text = part.replace(/[0-9.-]/g, '').trim();
+                        document.getElementById('jml'+(i+1)).value = num === 0 ? '' : num;
                         if (text && tsSatuan[i]) {
                             tsSatuan[i].addOption({value: text, text: text});
                             tsSatuan[i].setValue(text);
@@ -1207,9 +1436,12 @@
           } 
       });
 
+      // KEY PAYLOAD HARUS SESUAI COLUMN_MAP
       const newItem = { 
-          Sumber_Dana: d, 
+          ID_Rincian: editingRincianIndex !== -1 ? tempRincian[editingRincianIndex].ID_Rincian : "",
+          ID_Usulan: currentHeaderInfo.ID_Usulan || "",
           Kode_Rekening: r, 
+          Sumber_Dana: d, 
           Komponen: k, 
           Spesifikasi: document.getElementById('inputSpesifikasi').value, 
           Volume: v || 1, 
@@ -1218,7 +1450,7 @@
           Koefisien: kf.join(' x ') || '1 Unit', 
           Keterangan: document.getElementById('inputKeterangan').value, 
           Catatan: editingRincianIndex !== -1 ? tempRincian[editingRincianIndex].Catatan : '',
-          Status_Item: editingRincianIndex !== -1 ? tempRincian[editingRincianIndex].Status_Item : 'BELUM'
+          Status_Item: editingRincianIndex !== -1 ? tempRincian[editingRincianIndex].Status_Item : 'Aktif'
       };
 
       if (editingRincianIndex === -1) {
@@ -1235,78 +1467,289 @@
 
     function hapusRincianTemp(index) {
         if(confirm("Hapus rincian ini?")) {
+            const item = tempRincian[index];
+            // Hapus juga di database backend jika item ini dulunya sudah pernah di-save (punya ID_Rincian)
+            if (item.ID_Rincian && typeof google !== 'undefined') {
+                google.script.run.deleteRincian(item.ID_Rincian, item.ID_Usulan);
+            }
             tempRincian.splice(index, 1);
             renderRincianView();
         }
     }
 
-    // 4. SIMPAN FINAL KE DATABASE
+    // 4. BATCH SAVE: SIMPAN USULAN KE DATABASE
     function saveUsulanKeDatabase() {
       if (tempRincian.length === 0) return showToast("Tambahkan minimal 1 Rincian Belanja!", "error");
       
-      // Update Total
-      currentHeaderInfo.Total_Anggaran = tempRincian.reduce((s,i)=>s+i.Sub_Total, 0);
+      currentHeaderInfo.Total_Anggaran = tempRincian.reduce((s,i)=>s+safeNum(i.Sub_Total), 0);
+      showToast("Menyimpan draft usulan...");
       
-      showToast("Menyimpan usulan...");
+      const loaderIcon = document.getElementById('globalLoader');
+      if(loaderIcon) loaderIcon.classList.remove('hidden');
+
       if (typeof google !== 'undefined' && google.script) {
-        google.script.run
-            .withSuccessHandler(res => { 
-                if(res.success) { 
-                    showToast("Draft usulan berhasil disimpan."); 
-                    loadAllInitialData(); 
-                    switchView('listView'); 
-                } else { showToast(res.message, "error"); }
-            })
-            .withFailureHandler(err => { showToast("Gagal menyimpan ke server: " + err.message, "error"); })
-            .simpanUsulan(currentHeaderInfo, tempRincian);
-      } else {
-          // Simulasi Local
-          showToast("Simulasi tersimpan.");
-          switchView('listView');
+          // 1. Simpan Header terlebih dahulu
+          google.script.run.withSuccessHandler(resUsulan => {
+              if (resUsulan && resUsulan.status === 'success') {
+                  const idUsulanSaved = resUsulan.id;
+                  let savedCount = 0;
+                  
+                  // 2. Lakukan perulangan untuk menyimpan tiap rincian satu persatu dengan ID_Usulan yang sama
+                  tempRincian.forEach((item) => {
+                      item.ID_Usulan = idUsulanSaved;
+                      google.script.run.withSuccessHandler(() => {
+                          savedCount++;
+                          if (savedCount === tempRincian.length) {
+                              if(loaderIcon) loaderIcon.classList.add('hidden');
+                              showToast("Draft Usulan & Rincian berhasil disimpan!");
+                              closeAllModals();
+                              refreshAllData(); // Ambil ulang data segar dari server
+                          }
+                      }).saveRincian(item);
+                  });
+              } else {
+                  if(loaderIcon) loaderIcon.classList.add('hidden');
+                  showToast((resUsulan && resUsulan.message ? resUsulan.message : "Gagal menyimpan usulan"), "error");
+              }
+          }).saveUsulan(currentHeaderInfo);
       }
     }
 
+    // RENDER INTERACTIVE CHARTS
+    function renderCharts(filteredData) {
+        const isAdmin = checkIsAdmin();
 
-    // DATA LOADING (DASHBOARD)
+        // Destroy previous charts to avoid canvas overwrite issues
+        if (statusChartInstance) statusChartInstance.destroy();
+        if (barChartInstance) barChartInstance.destroy();
+
+        // 1. DOUGHNUT CHART: Status Proporsi
+        let statusTotals = { 'DRAFT': 0, 'KOREKSI': 0, 'VERIFIKASI': 0, 'DISETUJUI': 0 };
+        filteredData.forEach(d => {
+            let stat = d.Status || 'DRAFT';
+            if (statusTotals[stat] !== undefined) {
+                statusTotals[stat] += safeNum(d.Total_Anggaran);
+            }
+        });
+
+        const ctxStatus = document.getElementById('statusChart').getContext('2d');
+        statusChartInstance = new Chart(ctxStatus, {
+            type: 'doughnut',
+            data: {
+                labels: ['Draft', 'Perlu Koreksi', 'Dalam Verifikasi', 'Disetujui'],
+                datasets: [{
+                    data: [statusTotals['DRAFT'], statusTotals['KOREKSI'], statusTotals['VERIFIKASI'], statusTotals['DISETUJUI']],
+                    backgroundColor: ['#E2E8F0', '#FDBA74', '#FDE047', '#86EFAC'],
+                    borderWidth: 2,
+                    hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11, family: 'Inter' } } },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                if (context.parsed !== null) {
+                                    label += new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(context.parsed);
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // 2. BAR CHART: Distribusi Anggaran
+        let barData = {};
+        filteredData.forEach(d => {
+            // Admin melihat per Bidang. Selain admin melihat per Sub Kegiatan.
+            let key = isAdmin ? d.Bidang : d.Sub_Kegiatan;
+            if (!key) key = 'Lainnya';
+            if (!barData[key]) barData[key] = 0;
+            barData[key] += safeNum(d.Total_Anggaran);
+        });
+
+        // Sort Top 10 Descending
+        let sortedBar = Object.entries(barData).sort((a,b) => b[1] - a[1]).slice(0, 10);
+        let barLabels = sortedBar.map(item => item[0]);
+        let barValues = sortedBar.map(item => item[1]);
+
+        document.getElementById('barChartTitle').innerText = isAdmin ? 'Top 10 Anggaran per Unit Kerja' : 'Top 10 Anggaran per Sub Kegiatan';
+
+        const ctxBar = document.getElementById('barChart').getContext('2d');
+        barChartInstance = new Chart(ctxBar, {
+            type: 'bar',
+            data: {
+                labels: barLabels,
+                datasets: [{
+                    label: 'Total Anggaran',
+                    data: barValues,
+                    backgroundColor: [
+                        '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', 
+                        '#ec4899', '#f43f5e', '#f97316', '#f59e0b', '#eab308'
+                    ],
+                    borderRadius: 6,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: function(context) {
+                                // Tampilkan nama lengkap di tooltip
+                                return context[0].label;
+                            },
+                            label: function(context) {
+                                let val = context.parsed.y;
+                                return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: {
+                            font: { family: 'Inter', size: 10 },
+                            callback: function(value) {
+                                // Potong label x-axis jika kepanjangan (agar tidak merusak UI)
+                                let label = this.getLabelForValue(value);
+                                return label.length > 15 ? label.substr(0, 15) + '...' : label;
+                            }
+                        },
+                        grid: { display: false }
+                    },
+                    y: {
+                        ticks: {
+                            font: { family: 'Inter', size: 10 },
+                            callback: function(value) {
+                                if (value >= 1000000000) return 'Rp ' + (value / 1000000000).toFixed(1) + ' M';
+                                if (value >= 1000000) return 'Rp ' + (value / 1000000).toFixed(0) + ' Jt';
+                                return value;
+                            }
+                        },
+                        beginAtZero: true,
+                        border: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+    // DATA LOADING (DASHBOARD & TABEL)
+    function refreshAllData() {
+        const loader = document.getElementById('globalLoader');
+        if(loader) loader.classList.remove('hidden');
+        
+        if (typeof google !== 'undefined' && google.script) {
+            // Override request level untuk compatibility akun admin lama
+            let reqLevel = currentLevel;
+            if (currentBidang === 'Admin Verifikator') reqLevel = 'Admin Verifikator';
+
+            // Mengambil semua Data Usulan
+            google.script.run.withSuccessHandler(resU => {
+                if(resU && resU.status === 'success') {
+                    allData = (resU.data ? resU.data : []);
+                }
+                
+                // Mengambil semua Data Rincian untuk RAB / Verifikasi (Panggil tanpa ID untuk load semua)
+                google.script.run.withSuccessHandler(resR => {
+                    if(resR && resR.status === 'success') {
+                        allRincian = (resR.data ? resR.data : []);
+                    }
+                    if(loader) loader.classList.add('hidden');
+                    loadData(); // Render dashboard/tabel UI
+                }).getRincianData();
+            }).getUsulanData(currentBidang, currentUser, reqLevel); // PANGGIL DENGAN DATA SESSION BARU
+        }
+    }
+
     function loadData() {
       const tbody = document.getElementById('tableBody'); if(!tbody) return;
-      const isAdmin = currentRole.toLowerCase().includes("admin") || currentRole.toLowerCase().includes("verifikator");
-      const filtered = isAdmin ? allData : allData.filter(d => d.Bidang === currentRole);
+      
+      // FILTERING GANDA DI FRONTEND (Mencegah kebocoran data jika backend salah respon)
+      const isAdmin = checkIsAdmin();
+      const isKabid = (currentLevel === 'Level Bidang' || currentLevel === 'Kepala Bidang');
+
+      let filtered = allData;
+      if (!isAdmin) {
+          if (isKabid) {
+              filtered = allData.filter(d => d.Bidang === currentBidang);
+          } else {
+              filtered = allData.filter(d => d.Bidang === currentBidang && d.Pembuat === currentUser);
+          }
+      }
 
       // Dashboards
       document.getElementById('dashTotalUsulan').innerText = filtered.length;
-      document.getElementById('dashTotalAnggaran').innerText = formatRp(filtered.reduce((s, i) => s + (Number(i.Total_Anggaran) || 0), 0));
+      document.getElementById('dashTotalAnggaran').innerText = formatRp(filtered.reduce((s, i) => s + safeNum(i.Total_Anggaran), 0));
       document.getElementById('dashDisetujui').innerText = filtered.filter(x => x.Status === 'DISETUJUI').length;
       document.getElementById('dashProses').innerText = filtered.filter(x => x.Status === 'VERIFIKASI' || x.Status === 'KOREKSI').length;
 
-      if(filtered.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="p-10 text-center italic text-gray-400">Belum ada usulan pada bidang ini.</td></tr>'; return; }
+      // PANGGIL FUNGSI RENDER CHART DENGAN DATA YANG SUDAH DIFILTER TAPI CEGAH CRASH
+      try {
+          renderCharts(filtered);
+      } catch (e) {
+          console.error("Gagal memuat grafik: ", e);
+      }
+
+      if(filtered.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="p-10 text-center italic text-gray-400">Belum ada usulan pada unit kerja ini.</td></tr>'; return; }
       
       tbody.innerHTML = filtered.map(g => {
         let bc = 'status-draft';
         if(g.Status === 'KOREKSI') bc = 'status-koreksi';
         if(g.Status === 'VERIFIKASI') bc = 'status-verifikasi';
         if(g.Status === 'DISETUJUI') bc = 'status-disetujui';
+        
+        const isEditable = !isAdmin && (g.Status === 'DRAFT' || g.Status === 'KOREKSI');
+        
         return `
         <tr class="hover:bg-blue-50/50 border-b">
           <td class="px-6 py-4"><span class="px-2 py-1 rounded-full text-[10px] font-bold ${bc}">${g.Status || 'DRAFT'}</span></td>
           <td class="px-6 py-4 text-xs font-medium text-gray-500">${g.Bidang}</td>
+          <td class="px-6 py-4 text-xs font-bold text-gray-600">${g.Pembuat || '-'}</td>
           <td class="px-6 py-4"><button onclick="openRincianView('${g.ID_Usulan}')" class="text-left font-bold text-slate-700 hover:text-blue-600 w-full whitespace-normal block">${g.Sub_Kegiatan}</button></td>
           <td class="px-6 py-4 text-right font-black text-blue-900">${formatRp(g.Total_Anggaran)}</td>
           <td class="px-6 py-4 text-center whitespace-nowrap">
-            ${(!isAdmin && (g.Status === 'DRAFT' || g.Status === 'KOREKSI')) ? 
-              `<button onclick="openRincianView('${g.ID_Usulan}')" class="text-blue-500 mr-3" title="Edit"><i class="fas fa-edit fa-lg"></i></button><button onclick="openDeleteModal('${g.ID_Usulan}')" class="text-red-500 mr-3" title="Hapus"><i class="fas fa-trash fa-lg"></i></button>` : 
-              `<button onclick="openRincianView('${g.ID_Usulan}')" class="text-indigo-500 mr-3" title="Lihat Daftar Rincian"><i class="fas fa-list fa-lg"></i></button>`}
+            ${isEditable ? `
+              <button onclick="openRincianView('${g.ID_Usulan}')" class="text-blue-500 mr-3" title="Edit"><i class="fas fa-edit fa-lg"></i></button><button onclick="openDeleteModal('${g.ID_Usulan}')" class="text-red-500 mr-3" title="Hapus"><i class="fas fa-trash fa-lg"></i></button>
+            ` : `
+              <button onclick="openRincianView('${g.ID_Usulan}')" class="text-indigo-500 mr-3" title="Lihat Daftar Rincian"><i class="fas fa-list fa-lg"></i></button>
+            `}
             ${(isAdmin && g.Status === 'VERIFIKASI') ? `<button onclick="openVerifikasi('${g.ID_Usulan}')" class="text-green-600 mr-3" title="Review Verifikasi"><i class="fas fa-check-double fa-lg"></i></button>` : ''}
           </td>
         </tr>`;
       }).join('');
     }
 
-    // FUNGSI KIRIM & HAPUS USULAN (tetap sama)
+    // FUNGSI KIRIM & HAPUS USULAN
     function kirimUsulan() {
-        const isAdmin = currentRole.toLowerCase().includes("admin") || currentRole.toLowerCase().includes("verifikator");
+        const isAdmin = checkIsAdmin();
+        const isKabid = (currentLevel === 'Level Bidang' || currentLevel === 'Kepala Bidang');
+        
         if (!isScheduleActive && !isAdmin) { return showModalNotif("Akses Terkunci", "Maaf, jadwal pengajuan telah dikunci."); }
-        const drafts = allData.filter(d => d.Bidang === currentRole && (d.Status === 'DRAFT' || d.Status === 'KOREKSI'));
+        
+        // Cek draft yang dia miliki / bisa dia kirim
+        let drafts = allData.filter(d => (d.Status === 'DRAFT' || d.Status === 'KOREKSI'));
+        
+        // FILTERING GANDA (Mencegah pengiriman data orang lain)
+        if (!isAdmin) {
+            if (isKabid) {
+                drafts = drafts.filter(d => d.Bidang === currentBidang);
+            } else {
+                drafts = drafts.filter(d => d.Bidang === currentBidang && d.Pembuat === currentUser);
+            }
+        }
+
         if (drafts.length === 0) { return showToast("Tidak ada usulan DRAFT / KOREKSI.", "error"); }
         document.getElementById('kirimModalText').innerText = `Kirim ${drafts.length} usulan untuk diverifikasi Admin?`;
         document.getElementById('kirimModal').classList.remove('hidden');
@@ -1316,40 +1759,75 @@
 
     function confirmKirimUsulan() {
         closeKirimModal(); showToast("Mengirim...");
-        if (typeof google !== 'undefined' && google.script) {
-            google.script.run
-                .withSuccessHandler(function(res) { if(res.success) { showToast(res.message); loadAllInitialData(); } else { showToast(res.message, "error"); } })
-                .withFailureHandler(err => { showToast("Error server: " + err.message, "error"); })
-                .kirimUsulanBidang(currentRole);
-        } else { loadData(); showToast("Dikirim (Simulasi)!"); }
+        
+        const isAdmin = checkIsAdmin();
+        const isKabid = (currentLevel === 'Level Bidang' || currentLevel === 'Kepala Bidang');
+        
+        let drafts = allData.filter(d => (d.Status === 'DRAFT' || d.Status === 'KOREKSI'));
+        if (!isAdmin) {
+            if (isKabid) {
+                drafts = drafts.filter(d => d.Bidang === currentBidang);
+            } else {
+                drafts = drafts.filter(d => d.Bidang === currentBidang && d.Pembuat === currentUser);
+            }
+        }
+        
+        let processed = 0;
+        drafts.forEach(d => {
+            google.script.run.withSuccessHandler(() => {
+                processed++;
+                if (processed === drafts.length) {
+                    showToast("Usulan berhasil dikirim ke Admin!");
+                    refreshAllData(); // Reload UI otomatis
+                }
+            }).updateStatusUsulan(d.ID_Usulan, 'VERIFIKASI');
+        });
     }
 
     function openDeleteModal(idUsulan) { proposalToDeleteId = idUsulan; document.getElementById('deleteModal').classList.remove('hidden'); }
     function closeDeleteModal() { proposalToDeleteId = null; document.getElementById('deleteModal').classList.add('hidden'); }
+    
     function confirmDeleteProposal() {
-        if (!proposalToDeleteId) return; const id = proposalToDeleteId; closeDeleteModal(); showToast("Menghapus...");
+        if (!proposalToDeleteId) return; 
+        const id = proposalToDeleteId; 
+        closeDeleteModal(); 
+        showToast("Menghapus...");
         if (typeof google !== 'undefined' && google.script) {
             google.script.run
-                .withSuccessHandler(function(res) { if(res.success) { showToast(res.message); loadAllInitialData(); } else { showToast(res.message, "error"); } })
+                .withSuccessHandler(function(res) { 
+                    if(res && res.status === 'success') { showToast(res.message); refreshAllData(); } 
+                    else { showToast((res && res.message ? res.message : "Error"), "error"); } 
+                })
                 .withFailureHandler(err => { showToast("Gagal menghapus: " + err.message, "error"); })
-                .hapusUsulan(id);
-        } else { allData = allData.filter(d => d.ID_Usulan !== id); loadData(); showToast("Dihapus (Simulasi)!"); }
+                .deleteUsulan(id);
+        }
     }
-
 
     // VERIFIKASI ADMIN
     function openVerifikasi(id) {
         const h = allData.find(d => d.ID_Usulan === id); if(!h) return;
         currentVerifikasiId = id;
         document.getElementById('verifSubKegiatan').innerText = h.Sub_Kegiatan; document.getElementById('verifBidang').innerText = h.Bidang;
-        verifikasiItems = allRincian.filter(r => r.ID_Usulan === id).map(it => ({ ...it, Status_Item: it.Status_Item || 'BELUM', Catatan: it.Catatan || '' }));
+        document.getElementById('verifTarget').innerText = h.Target; document.getElementById('verifId').innerText = h.ID_Usulan;
+        verifikasiItems = allRincian.filter(r => r.ID_Usulan === id).map(it => Object.assign({}, it, { Status_Item: it.Status_Item || 'BELUM', Catatan: it.Catatan || '' }));
+        document.getElementById('verifTotalAnggaran').innerText = formatRp(h.Total_Anggaran);
         renderVerifikasiTable(); switchView('verifikasiView');
     }
     function renderVerifikasiTable() {
-        document.getElementById('verifTableBody').innerHTML = verifikasiItems.map((it, idx) => `
+        document.getElementById('verifTableBody').innerHTML = verifikasiItems.map((it, idx) => {
+            // Cari Nama Rekening berdasarkan Kode Rekening
+            const rek = allRekening.find(r => String(r.Kode_Rekening).trim() === String(it.Kode_Rekening).trim());
+            const namaRekening = rek ? rek.Nama_Rekening : "Rekening Tidak Ditemukan";
+            
+            return `
             <tr class="border-b hover:bg-blue-50 transition">
                 <td class="p-4 text-center"><input type="checkbox" class="checkbox-custom verif-checkbox" data-index="${idx}" onchange="checkVerifSelected()"></td>
-                <td class="p-4 min-w-[200px] whitespace-normal"><b>${it.Komponen}</b><br><small class="text-gray-500">${it.Spesifikasi}</small><br><span class="bg-green-100 text-green-700 text-[10px] px-1 rounded mt-1 inline-block">${it.Sumber_Dana}</span></td>
+                <td class="p-4 min-w-[200px] whitespace-normal">
+                    <div class="font-bold text-gray-800">${it.Keterangan || 'Tanpa Keterangan'}</div>
+                    <div class="text-xs text-gray-500 mt-1">${it.Komponen}${it.Spesifikasi ? ' - ' + it.Spesifikasi : ''}</div>
+                    <div class="mt-2"><span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-1 rounded font-mono border border-blue-100">${it.Kode_Rekening} - ${namaRekening}</span></div>
+                    <div class="mt-1"><span class="bg-green-100 text-green-700 text-[10px] px-1 rounded inline-block">${it.Sumber_Dana}</span></div>
+                </td>
                 <td class="p-4 text-center"><b>${it.Volume}</b><br><span class="text-[10px] text-gray-500 italic">${it.Koefisien}</span><br><span class="text-xs text-blue-600 font-bold">@ ${formatRp(it.Harga_Satuan)}</span></td>
                 <td class="p-4 text-right font-bold text-blue-700">${formatRp(it.Sub_Total)}</td>
                 <td class="p-4 text-center">
@@ -1358,7 +1836,8 @@
                     <div class="text-[10px] font-bold mt-2">${it.Status_Item === 'DISETUJUI' ? '<span class="text-green-600">DISETUJUI</span>' : (it.Status_Item === 'KOREKSI' ? '<span class="text-red-600">KOREKSI</span>' : '<span class="text-gray-400">BELUM REVIEW</span>')}</div>
                 </td>
                 <td class="p-4"><textarea onchange="verifikasiItems[${idx}].Catatan=this.value" class="w-full text-xs border border-gray-300 p-2 rounded focus:border-blue-500 focus:outline-none" placeholder="Catatan Admin...">${it.Catatan}</textarea></td>
-            </tr>`).join('');
+            </tr>`
+        }).join('');
         
         const reviewed = verifikasiItems.filter(i => i.Status_Item !== 'BELUM').length;
         document.getElementById('verifProgressBar').style.width = (verifikasiItems.length === 0 ? 0 : Math.round((reviewed / verifikasiItems.length) * 100)) + '%';
@@ -1375,26 +1854,37 @@
         });
         document.getElementById('checkAllVerif').checked = false; renderVerifikasiTable();
     }
+    
     function simpanHasilVerifikasi() {
         if(verifikasiItems.some(i => i.Status_Item === 'BELUM')) return showToast("Ada rincian yang BELUM direview!", "error");
         const status = verifikasiItems.some(i => i.Status_Item === 'KOREKSI') ? 'KOREKSI' : 'DISETUJUI';
-        if(!confirm(status === 'KOREKSI' ? "Kembalikan ke Bidang untuk dikoreksi?" : "Setujui usulan ini?")) return;
+        if(!confirm(status === 'KOREKSI' ? "Kembalikan ke Unit Kerja untuk dikoreksi?" : "Setujui usulan ini?")) return;
         
         showToast("Menyimpan hasil verifikasi...");
-        if (typeof google !== 'undefined' && google.script) {
-            google.script.run
-                .withSuccessHandler(res => { 
-                    if(res.success) { showToast(res.message); loadAllInitialData(); switchView('listView'); } else { showToast(res.message, "error"); }
-                })
-                .withFailureHandler(err => { showToast("Gagal menyimpan verifikasi: " + err.message, "error"); })
-                .simpanHasilVerifikasi(currentVerifikasiId, status, verifikasiItems);
-        }
+        
+        // 1. Update status di header usulan
+        google.script.run.withSuccessHandler(res => {
+            // 2. Simpan status dan catatan masing-masing rincian
+            let rincianSaved = 0;
+            verifikasiItems.forEach(item => {
+                google.script.run.withSuccessHandler(() => {
+                    rincianSaved++;
+                    if(rincianSaved === verifikasiItems.length) {
+                        showToast("Hasil verifikasi berhasil disimpan!");
+                        refreshAllData();
+                        switchView('listView');
+                    }
+                }).saveRincian(item); 
+            });
+        }).updateStatusUsulan(currentVerifikasiId, status);
     }
 
-    // PRINT / EXCEL RAB (tetap sama)
+    // PRINT / EXCEL RAB
     function generateRab() {
        const body = document.getElementById('rabBody'); if(!body) return;
-       const isAdmin = currentRole.toLowerCase().includes("admin") || currentRole.toLowerCase().includes("verifikator");
+       const isAdmin = checkIsAdmin();
+       const isKabid = (currentLevel === 'Level Bidang' || currentLevel === 'Kepala Bidang');
+       
        const adminControl = document.getElementById('rabAdminControl'); const bidangControl = document.getElementById('rabBidangControl');
 
        if (isAdmin) {
@@ -1405,28 +1895,46 @@
            if(adminControl) adminControl.classList.add('hidden'); if(bidangControl) bidangControl.classList.remove('hidden');
        }
        
-       const selectedBidang = isAdmin ? (document.getElementById('selectRabBidang')?.value || 'ALL') : currentRole;
+       const selBidangEl = document.getElementById('selectRabBidang');
+       const selectedBidang = isAdmin ? (selBidangEl ? selBidangEl.value : 'ALL') : currentBidang;
+       
        const validHeaders = allData.filter(d => {
          if (isAdmin) {
-             const isNotDraft = d.Status && d.Status !== 'DRAFT'; const isNotAdmin = d.Bidang !== 'Admin Verifikator';
-             if (selectedBidang === 'ALL') return isNotDraft && isNotAdmin; return isNotDraft && d.Bidang === selectedBidang;
+             const isNotDraft = d.Status && d.Status !== 'DRAFT'; 
+             const isNotAdmin = d.Bidang !== 'Admin Verifikator';
+             if (selectedBidang === 'ALL') return isNotDraft && isNotAdmin; 
+             return isNotDraft && d.Bidang === selectedBidang;
          }
-         return d.Bidang === currentRole;
+         
+         // Kalau bukan admin, yang dicetak RAB adalah semua yang bukan DRAFT (yang sudah fix dikirim/disetujui)
+         const isNotDraft = d.Status && d.Status !== 'DRAFT';
+         if (isKabid) {
+             return isNotDraft && d.Bidang === currentBidang;
+         } else {
+             return isNotDraft && d.Bidang === currentBidang && d.Pembuat === currentUser;
+         }
        });
        
        const validIds = validHeaders.map(h => h.ID_Usulan);
        const filteredRincian = allRincian.filter(r => validIds.includes(r.ID_Usulan));
-       const unitKerjaText = isAdmin ? (selectedBidang === 'ALL' ? 'SEMUA BIDANG' : selectedBidang.toUpperCase()) : currentRole.toUpperCase();
+       const unitKerjaText = isAdmin ? (selectedBidang === 'ALL' ? 'SEMUA UNIT KERJA' : selectedBidang.toUpperCase()) : (currentBidang || "").toUpperCase();
        
        document.getElementById('rabSumberDanaTitle').innerText = `TAHAPAN ${sistemTahapan.toUpperCase()} T.A. ${sistemTahunAnggaran}`;
-       document.getElementById('rabUnitKerjaDisplay').innerText = `BIDANG ${unitKerjaText}`; document.getElementById('rabSignText').innerText = `BIDANG ${unitKerjaText}`;
+       document.getElementById('rabUnitKerjaDisplay').innerText = `UNIT KERJA ${unitKerjaText}`; document.getElementById('rabSignText').innerText = `UNIT KERJA ${unitKerjaText}`;
        
        if (filteredRincian.length === 0) { 
            body.innerHTML = '<tr><td colspan="16" class="p-10 text-center italic text-gray-500">Belum ada data usulan.</td></tr>'; document.getElementById('rabGrandTotal').innerText = formatRp(0); return; 
        }
 
        const groupedData = {}; validHeaders.forEach(h => { groupedData[h.ID_Usulan] = { header: h, items: [], total: 0 }; });
-       let grandTotal = 0; filteredRincian.forEach(r => { if(groupedData[r.ID_Usulan]) { groupedData[r.ID_Usulan].items.push(r); groupedData[r.ID_Usulan].total += r.Sub_Total; grandTotal += r.Sub_Total; } });
+       let grandTotal = 0; filteredRincian.forEach(r => { 
+           if(groupedData[r.ID_Usulan]) { 
+               const st = safeNum(r.Sub_Total);
+               groupedData[r.ID_Usulan].items.push(r); 
+               groupedData[r.ID_Usulan].total += st; 
+               grandTotal += st; 
+           } 
+       });
        document.getElementById('rabGrandTotal').innerText = formatRp(grandTotal);
 
        let html = ""; let urutPrior = 1;
@@ -1438,13 +1946,19 @@
                html += `<tr class="border-b border-black">`;
                if (index === 0) { html += `<td class="text-center align-top" rowspan="${items.length}">${urutPrior++}</td><td class="align-top" rowspan="${items.length}">${item.Keterangan || group.header.Sub_Kegiatan}</td>`; }
 
-               let rekMaster = allRekening.find(r => r.kode === item.Kode_Rekening); let rekName = rekMaster ? rekMaster.nama : ""; let rekDisplay = rekName ? `<b>${item.Kode_Rekening}</b><br>${rekName}` : item.Kode_Rekening;
+               // Cari Nama Rekening
+               let rekMaster = allRekening.find(r => String(r.Kode_Rekening).trim() === String(item.Kode_Rekening).trim()); 
+               let rekName = rekMaster ? rekMaster.Nama_Rekening : "Rekening Tidak Ditemukan"; 
+               let rekDisplay = `<b>${item.Kode_Rekening}</b><br>${rekName}`;
 
                html += `<td class="align-top text-left">${rekDisplay}</td><td class="align-top">${item.Komponen}</td><td class="align-top">${item.Spesifikasi}</td>`;
                
                let extractedUnits = item.Koefisien.split('x').map(p => p.replace(/[0-9.]/g, '').trim()).filter(p => p !== '').join(' / ');
                
-               html += `<td class="text-center align-top font-bold">${item.Volume}</td><td class="text-center align-top">${extractedUnits}</td><td class="text-center align-top">${item.Koefisien}</td><td class="text-right whitespace-nowrap align-top">${formatRp(item.Harga_Satuan)}</td><td class="text-right whitespace-nowrap align-top">${formatRp(item.Sub_Total)}</td>`;
+               const hrg = safeNum(item.Harga_Satuan);
+               const st = safeNum(item.Sub_Total);
+               
+               html += `<td class="text-center align-top font-bold">${item.Volume}</td><td class="text-center align-top">${extractedUnits}</td><td class="text-center align-top">${item.Koefisien}</td><td class="text-right whitespace-nowrap align-top">${formatRp(hrg)}</td><td class="text-right whitespace-nowrap align-top">${formatRp(st)}</td>`;
 
                if (index === 0) {
                   html += `<td class="text-right font-bold align-top whitespace-nowrap" rowspan="${items.length}">${formatRp(group.total)}</td><td class="align-top" rowspan="${items.length}">${group.header.Sub_Kegiatan}</td>`;
@@ -1463,7 +1977,7 @@
 
     function exportToExcel() {
       const table = document.getElementById('exportRabTable'); if (!table) return;
-      let sumberDanaRaw = document.getElementById('rabSumberDanaTitle').innerText; let unitKerjaRaw = document.getElementById('rabUnitKerjaDisplay').innerText; let unitKerja = unitKerjaRaw.replace('BIDANG ', '').replace(/[^a-zA-Z0-9 ]/g, "").trim(); let filename = `RAB_${unitKerja}.xls`.replace(/ /g, "_");
+      let sumberDanaRaw = document.getElementById('rabSumberDanaTitle').innerText; let unitKerjaRaw = document.getElementById('rabUnitKerjaDisplay').innerText; let unitKerja = unitKerjaRaw.replace('UNIT KERJA ', '').replace(/[^a-zA-Z0-9 ]/g, "").trim(); let filename = `RAB_${unitKerja}.xls`.replace(/ /g, "_");
       let html = table.cloneNode(true).outerHTML;
       let excelFile = `
         <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><style>table { border-collapse: collapse; width: 100%; font-family: 'Arial', sans-serif; font-size: 11px; }th, td { border: 1px solid #000000; padding: 4px; vertical-align: top; }th { text-align: center; vertical-align: middle; }.rab-header-green th { background-color: #92D050; font-weight: bold; color: #000; }.rab-total-blue td { background-color: #00B0F0; font-weight: bold; color: #000; }.text-center { text-align: center; }.text-right { text-align: right; }.text-left { text-align: left; }.font-bold { font-weight: bold; }.align-top { vertical-align: top; }</style></head>
@@ -1473,117 +1987,162 @@
       document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); showToast("File Excel berhasil diunduh!");
     }
 
-    // INITIALIZATION (tetap sama)
+    // INITIALIZATION (ANTI-CRASH)
     function loadAllInitialData() {
       if (typeof google !== 'undefined' && google.script) {
         google.script.run
           .withSuccessHandler(res => {
-              if(res.success) {
-                sistemTahapan = res.pengaturan.tahapan; 
-                let rawDeadline = res.pengaturan.deadline || ""; 
-                sistemTahunAnggaran = res.pengaturan.tahun;
-                
-                document.getElementById('displayTahapan').innerText = sistemTahapan;
-                document.getElementById('displayTahunAnggaranList').innerText = "T.A. " + sistemTahunAnggaran;
-                
-                if (typeof rawDeadline === 'string' && rawDeadline.startsWith("_TXT_")) {
-                    sistemDeadline = rawDeadline.replace("_TXT_", "");
-                } else {
-                    sistemDeadline = rawDeadline; 
-                }
-                
-                if (sistemDeadline) { 
-                    let d = new Date(sistemDeadline); 
-                    if (!isNaN(d.getTime())) { 
-                        let tzoffset = (new Date()).getTimezoneOffset() * 60000; 
-                        document.getElementById('inputDeadline').value = (new Date(d.getTime() - tzoffset)).toISOString().slice(0, 16); 
-                    } 
-                } else { document.getElementById('inputDeadline').value = ""; }
+              try {
+                  if(res && res.status === 'success') {
+                    sistemTahapan = (res.pengaturan && res.pengaturan.Tahapan_Aktif) ? res.pengaturan.Tahapan_Aktif : "Belum Diatur"; 
+                    let rawDeadline = (res.pengaturan && res.pengaturan.Batas_Waktu) ? res.pengaturan.Batas_Waktu : ""; 
+                    sistemTahunAnggaran = (res.pengaturan && res.pengaturan.Tahun_Anggaran) ? res.pengaturan.Tahun_Anggaran : new Date().getFullYear();
+                    
+                    const tahapanDisplay = document.getElementById('displayTahapan');
+                    if(tahapanDisplay) tahapanDisplay.innerText = sistemTahapan;
 
-                startCountdown(); 
-                allData = res.usulan; allRincian = res.rincian; allRekening = res.rekening;
-                loadData(); setupDropdownsLengkap(res);
+                    const thnDisplay = document.getElementById('displayTahunAnggaranList');
+                    if(thnDisplay) thnDisplay.innerText = "T.A. " + sistemTahunAnggaran;
+                    
+                    if (typeof rawDeadline === 'string' && rawDeadline.startsWith("_TXT_")) {
+                        sistemDeadline = rawDeadline.replace("_TXT_", "");
+                    } else {
+                        sistemDeadline = rawDeadline; 
+                    }
+                    
+                    const deadlineInput = document.getElementById('inputDeadline');
+                    if (sistemDeadline) { 
+                        let d = new Date(sistemDeadline); 
+                        if (!isNaN(d.getTime())) { 
+                            let tzoffset = (new Date()).getTimezoneOffset() * 60000; 
+                            if(deadlineInput) deadlineInput.value = (new Date(d.getTime() - tzoffset)).toISOString().slice(0, 16); 
+                        } 
+                    } else { 
+                        if(deadlineInput) deadlineInput.value = ""; 
+                    }
+
+                    startCountdown(); 
+                    setupDropdownsLengkap(res);
+                    refreshAllData();
+                  } else {
+                    const cd = document.getElementById('displayCountdown');
+                    if(cd) cd.innerText = "Database Kosong/Error";
+                    showToast("Error dari server: " + (res && res.message ? res.message : "Unknown error"), "error");
+                  }
+              } catch(e) {
+                  const cd = document.getElementById('displayCountdown');
+                  if(cd) cd.innerText = "Error Render: " + e.message;
+                  console.error("Error UI: ", e);
               }
           })
           .withFailureHandler(err => {
-              console.error(err);
-              showToast("Gagal memuat data dari server: " + err.message, "error");
-              document.getElementById('displayCountdown').innerText = "Error server: " + err.message;
+              const cd = document.getElementById('displayCountdown');
+              if(cd) cd.innerText = "Koneksi Terputus";
+              showToast("Gagal terhubung ke Database: " + err.message, "error");
           })
           .getInitialData();
-      } else {
-          setTimeout(() => {
-              sistemTahapan = "Simulasi Lokal";
-              let d = new Date(); d.setDate(d.getDate() + 1); sistemDeadline = d.toISOString();
-              startCountdown();
-              setupDropdownsLengkap({
-                  subKegiatan: [{kode:"1", nama:"Testing Sub Kegiatan", indikator: "Jumlah Dokumen Perencanaan yang Disusun", satuan: "Dokumen"}], 
-                  sumberDana: ["DAU", "DAK Non Fisik"], 
-                  rekening: [{kode:"5.1.02.01.01", nama:"Belanja Alat Tulis Kantor"}], 
-                  satuan: ["Pkt", "Orang", "Bulan"]
-              });
-          }, 500);
       }
     }
     
+    // PEMBARUAN: Logika Inisialisasi TomSelect yang Jauh Lebih Kokoh (Anti-Crash/Bocor)
     function setupDropdownsLengkap(res) {
-       if(tsSubKegiatan) tsSubKegiatan.destroy();
-       const sk = document.getElementById('selectSubKegiatan'); sk.innerHTML = '<option value=""></option>';
-       
-       window.subKegiatanData = res.subKegiatan; 
-       res.subKegiatan.forEach(i => sk.add(new Option(i.kode + " - " + i.nama, i.nama)));
-       tsSubKegiatan = new TomSelect(sk, { 
-           placeholder: "Cari Sub Kegiatan...",
-           onChange: function(value) {
-               const selected = window.subKegiatanData.find(item => item.nama === value);
-               if (selected) {
-                   document.getElementById('inputIndikator').value = selected.indikator || '-';
-                   document.getElementById('inputTargetSatuan').value = selected.satuan || '-';
-               } else {
-                   document.getElementById('inputIndikator').value = '';
-                   document.getElementById('inputTargetSatuan').value = '';
-               }
+       try {
+           const sk = document.getElementById('selectSubKegiatan'); 
+           if(sk) {
+               if(tsSubKegiatan) { tsSubKegiatan.destroy(); tsSubKegiatan = null; }
+               sk.innerHTML = '<option value=""></option>';
+               
+               window.subKegiatanData = (res && res.subKegiatan) ? res.subKegiatan : []; 
+               
+               window.subKegiatanData.forEach(i => {
+                   const text = (i.Kode_SubKegiatan ? i.Kode_SubKegiatan + ' - ' : '') + (i.Nama_SubKegiatan || '');
+                   let opt = new Option(text, i.Nama_SubKegiatan || '');
+                   sk.add(opt);
+               });
+               
+               tsSubKegiatan = new TomSelect(sk, { 
+                   placeholder: "Cari Sub Kegiatan...",
+                   onChange: function(value) {
+                       if(!value) {
+                           document.getElementById('inputIndikator').value = '';
+                           document.getElementById('inputTargetSatuan').value = '';
+                           return;
+                       }
+                       // Pencarian data referensi yang super aman
+                       const selected = window.subKegiatanData.find(item => item.Nama_SubKegiatan === value);
+                       if (selected) {
+                           document.getElementById('inputIndikator').value = selected.Indikator || '-';
+                           document.getElementById('inputTargetSatuan').value = selected.Satuan || '-';
+                       } else {
+                           document.getElementById('inputIndikator').value = '';
+                           document.getElementById('inputTargetSatuan').value = '';
+                       }
+                   }
+               });
            }
-       });
 
-       if(tsSumberDana) tsSumberDana.destroy();
-       const sd = document.getElementById('selectSumberDana'); sd.innerHTML = '<option value=""></option>';
-       res.sumberDana.forEach(i => sd.add(new Option(i, i)));
-       tsSumberDana = new TomSelect(sd, { placeholder: "Pilih Dana..." });
+           const sd = document.getElementById('selectSumberDana'); 
+           if(sd) {
+               if(tsSumberDana) { tsSumberDana.destroy(); tsSumberDana = null; }
+               sd.innerHTML = '<option value=""></option>';
+               const dataDana = (res && res.sumberDana) ? res.sumberDana : [];
+               dataDana.forEach(i => { sd.add(new Option(i, i)) });
+               tsSumberDana = new TomSelect(sd, { placeholder: "Pilih Dana..." });
+           }
 
-       if(tsRekening) tsRekening.destroy();
-       const sr = document.getElementById('selectRekening'); sr.innerHTML = '<option value=""></option>';
-       res.rekening.forEach(i => sr.add(new Option(i.kode + " - " + i.nama, i.kode)));
-       tsRekening = new TomSelect(sr, { placeholder: "Cari Rekening..." });
+           const sr = document.getElementById('selectRekening'); 
+           if(sr) {
+               if(tsRekening) { tsRekening.destroy(); tsRekening = null; }
+               sr.innerHTML = '<option value=""></option>';
+               
+               allRekening = (res && res.rekening) ? res.rekening : []; 
+               
+               allRekening.forEach(i => {
+                   const kode = String(i.Kode_Rekening).trim();
+                   const nama = String(i.Nama_Rekening).trim();
+                   sr.add(new Option(`${kode} - ${nama}`, kode));
+               });
+               tsRekening = new TomSelect(sr, { placeholder: "Cari Rekening..." });
+           }
 
-       [1,2,3,4].forEach(n => {
-           const el = document.getElementById('sat'+n);
-           if (tsSatuan[n-1]) tsSatuan[n-1].destroy();
-           el.innerHTML = '<option value="">Satuan</option>';
-           res.satuan.forEach(i => el.add(new Option(i, i)));
-           tsSatuan[n-1] = new TomSelect(el, { create: true });
-       });
+           [1,2,3,4].forEach(n => {
+               const el = document.getElementById('sat'+n);
+               if(el) {
+                   if (tsSatuan[n-1]) { tsSatuan[n-1].destroy(); tsSatuan[n-1] = null; }
+                   el.innerHTML = '<option value="">Satuan</option>';
+                   const dataSatuan = (res && res.satuan) ? res.satuan : [];
+                   dataSatuan.forEach(i => el.add(new Option(i, i)));
+                   tsSatuan[n-1] = new TomSelect(el, { create: true });
+               }
+           });
+       } catch(e) {
+           console.error("Error setting up dropdowns: ", e);
+       }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        initUserForm();
-        const r = getSession(); if(r) { currentRole = r; document.getElementById('loginView').classList.add('hidden'); document.getElementById('appContainer').classList.remove('hidden'); updateRoleUI(); switchView('listView'); startSessionMonitor(); }
+        try {
+            initUserForm();
+            const r = getSession(); 
+            if(r) { 
+                currentBidang = r.bidang; 
+                currentUser = r.username;
+                currentLevel = r.level;
+                currentNama = r.nama || r.username; 
+                
+                document.getElementById('loginView').classList.add('hidden'); 
+                document.getElementById('appContainer').classList.remove('hidden'); 
+                updateRoleUI(); 
+                switchView('listView'); 
+                startSessionMonitor(); 
+            }
+        } catch(e) {
+            console.error("Init Error: ", e);
+        }
+        
+        // Memastikan fungsi ini tetap dipanggil meski ada error di atas
         loadAllInitialData();
     });
-    
-    function startSessionMonitor() { 
-        if (sessionCheckInterval) clearInterval(sessionCheckInterval);
-        sessionCheckInterval = setInterval(() => { 
-            if(currentRole && !getSession()) {
-                closeAllModals(); // Menutup semua pop-up otomatis jika sesi habis
-                currentRole = "";
-                document.getElementById('appContainer').classList.add('hidden'); 
-                document.getElementById('loginView').classList.remove('hidden');
-                document.getElementById('loginPassword').value = '';
-                showToast("Sesi Anda telah berakhir, silakan login kembali.", "error");
-            }
-        }, 60000); 
-    }
   </script>
 </body>
 </html>
