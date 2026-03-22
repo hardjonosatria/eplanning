@@ -11,6 +11,10 @@
   
   <!-- Tom Select CSS -->
   <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+  
+  <!-- CROPPER.JS UNTUK CROP TANDA TANGAN -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -20,14 +24,17 @@
     
     .bg-dinkes { background-color: #1e3a8a; }
     .text-dinkes { color: #1e3a8a; }
+    
+    /* GRADASI WARNA STATUS BARU */
     .status-draft { background-color: #F1F5F9; color: #475569; }
-    .status-koreksi { background-color: #FEF3C7; color: #B45309; }
-    .status-verifikasi { background-color: #FEF08A; color: #854D0E; }
-    .status-disetujui { background-color: #DCFCE7; color: #166534; }
+    .status-koreksiprog { background-color: #fecdd3; color: #be123c; } 
+    .status-kebidang { background-color: #e0f2fe; color: #0369a1; } 
+    .status-koreksibid { background-color: #fef08a; color: #a16207; } 
+    .status-keadmin { background-color: #fef9c3; color: #854d0e; } 
+    .status-disetujui { background-color: #DCFCE7; color: #166534; } 
     
     body { background-color: #F8FAFC; font-family: 'Inter', sans-serif; }
     
-    /* Nav Button Styling */
     .nav-btn {
       width: 100%; text-align: left; padding: 12px 16px; border-radius: 12px;
       font-size: 14px; font-weight: 600; transition: all 0.2s; display: flex; align-items: center; margin-bottom: 8px;
@@ -36,7 +43,6 @@
     .nav-btn.active { background-color: #eff6ff; color: #1e40af; }
     .nav-btn:not(.active):hover { background-color: #f9fafb; color: #111827; }
 
-    /* Standard Form Input Styling */
     .form-input, .ts-wrapper .ts-control {
       width: 100%; border: 1px solid #e2e8f0; border-radius: 0.375rem; padding: 0.6rem 0.8rem;
       background-color: #F9FAFB; font-size: 0.875rem; transition: all 0.2s; box-shadow: none; color: #1f2937;
@@ -48,13 +54,14 @@
       background-color: #e5e7eb; color: #6b7280; cursor: not-allowed; opacity: 0.8;
     }
 
-    /* Perbaikan Dropdown Tom Select (Kembali ke Default yang Rapi) */
+    /* Pengaturan TomSelect Asli GitHub untuk Text Mencegah Blank */
     .ts-wrapper { width: 100% !important; }
     .ts-wrapper.single .ts-control::after { border-color: #9ca3af transparent transparent transparent; }
     .ts-wrapper.single .ts-control { min-height: 42px; display: flex; align-items: center; }
     .ts-dropdown { border-radius: 0.375rem; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); z-index: 10050 !important; }
     .ts-dropdown .option { padding: 0.5rem 0.8rem; font-size: 0.875rem; }
     .ts-dropdown .option.active { background-color: #eff6ff; color: #1e40af; }
+    .ts-control .item { white-space: normal !important; word-break: break-word !important; }
 
     .z-modal { z-index: 9999 !important; }
     .z-toast { z-index: 10000 !important; }
@@ -82,6 +89,7 @@
       .no-print { display: none !important; }
       .rab-paper { box-shadow: none; margin: 0; padding: 0; width: 100%; }
       main { overflow: visible !important; }
+      .page-break-after { page-break-after: always; }
     }
     
     .loader {
@@ -161,7 +169,7 @@
 
     <!-- GLOBAL LOADER -->
     <div id="globalLoader" class="hidden absolute top-20 left-1/2 transform -translate-x-1/2 bg-blue-50 text-blue-800 p-3 rounded-lg shadow-lg flex items-center justify-center z-50 border border-blue-200">
-        <div class="loader mr-3"></div> <span class="text-sm font-bold">Memuat data dari server...</span>
+        <div class="loader mr-3"></div> <span class="text-sm font-bold" id="globalLoaderText">Memuat data dari server...</span>
     </div>
 
     <div class="flex flex-1 overflow-hidden relative">
@@ -172,11 +180,18 @@
           <button id="btnNavList" onclick="switchView('listView')" class="nav-btn active">
             <i class="fas fa-th-large mr-3 opacity-50"></i> Daftar Usulan
           </button>
-          <button id="btnNavForm" onclick="openHeaderModal()" class="nav-btn">
-            <i class="fas fa-plus-circle mr-3 opacity-50"></i> Buat Usulan Baru
-          </button>
+          
+          <div id="programMenuSection">
+              <button id="btnNavForm" onclick="openHeaderModal()" class="nav-btn">
+                <i class="fas fa-plus-circle mr-3 opacity-50"></i> Buat Usulan Baru
+              </button>
+              <button id="btnNavUpload" onclick="switchView('uploadView')" class="nav-btn">
+                <i class="fas fa-upload mr-3 opacity-50 text-blue-600"></i> Upload Dokumen
+              </button>
+          </div>
+          
           <button id="btnNavRab" onclick="switchView('rabView')" class="nav-btn">
-            <i class="fas fa-file-excel mr-3 opacity-50 text-green-600"></i> Format RAB
+            <i class="fas fa-file-excel mr-3 opacity-50 text-green-600"></i> Dokumen RAB Final
           </button>
           
           <div id="adminMenuSection" class="pt-6 mt-4 border-t border-gray-100 hidden">
@@ -202,8 +217,8 @@
               <p class="text-xs text-gray-500 font-medium" id="displayTahunAnggaranList">Tahun Anggaran -</p>
             </div>
             <div class="flex space-x-2" id="bidangActionButtons">
-              <button onclick="kirimUsulan()" class="bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-700 transition flex items-center shadow-sm">
-                <i class="fas fa-paper-plane mr-2"></i> Kirim Usulan
+              <button onclick="kirimUsulanKeBidang()" class="bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-700 transition flex items-center shadow-sm">
+                <i class="fas fa-paper-plane mr-2"></i> Kirim ke Bidang
               </button>
               <button onclick="openHeaderModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 transition flex items-center shadow-sm">
                 <i class="fas fa-plus mr-2"></i> Usulan Baru
@@ -253,14 +268,12 @@
 
           <!-- Interactive Charts Section -->
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6 no-print" id="chartsContainer">
-            <!-- Doughnut Chart: Status -->
             <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col items-center">
                 <h3 class="text-sm font-bold text-slate-800 mb-4 w-full text-left">Proporsi Anggaran berdasarkan Status</h3>
                 <div class="relative w-full h-64 flex justify-center">
                     <canvas id="statusChart"></canvas>
                 </div>
             </div>
-            <!-- Bar Chart: Sub Kegiatan / Unit Kerja -->
             <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col">
                 <h3 class="text-sm font-bold text-slate-800 mb-4 w-full text-left" id="barChartTitle">Distribusi Anggaran</h3>
                 <div class="relative w-full h-64">
@@ -275,7 +288,7 @@
               <table class="w-full text-sm whitespace-nowrap md:whitespace-normal">
                 <thead class="bg-gray-50 text-gray-400 font-bold border-b text-[10px] uppercase tracking-wider">
                   <tr>
-                    <th class="px-6 py-4 text-left w-24">Status</th>
+                    <th class="px-6 py-4 text-left w-36">Status Level</th>
                     <th class="px-6 py-4 text-left">Unit Kerja</th>
                     <th class="px-6 py-4 text-left">Pengusul</th>
                     <th class="px-6 py-4 text-left w-1/3">Sub-Kegiatan</th>
@@ -291,7 +304,44 @@
           </div>
         </div>
 
-        <!-- ================= HALAMAN VERIFIKASI ADMIN ================= -->
+        <!-- ================= UPLOAD VIEW ================= -->
+        <div id="uploadView" class="hidden p-4 md:p-10 space-y-6">
+          <div class="max-w-4xl mx-auto space-y-6">
+            <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100">
+              <h2 class="text-xl font-bold text-slate-800 mb-6 border-b pb-4">
+                <i class="fas fa-upload text-blue-600 mr-2"></i> Upload Dokumen Pendukung
+              </h2>
+              
+              <div class="space-y-5">
+                 <div>
+                    <label class="label-form">Pilih Usulan (Hanya DRAFT / KOREKSI PROGRAM) <span class="text-red-500">*</span></label>
+                    <select id="selectUsulanUpload" class="form-input"></select>
+                 </div>
+                 
+                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                    <div>
+                        <label class="label-form">1. TOR / Kerangka Acuan Kerja (Wajib) <span class="text-red-500">*</span></label>
+                        <p class="text-[10px] text-gray-400 mb-2">Format: PDF, DOC, DOCX. Maks: 5MB</p>
+                        <input type="file" id="fileKAK_Sidebar" accept=".pdf,.doc,.docx" class="form-input text-xs" onchange="validateFile(this)">
+                    </div>
+                    <div>
+                        <label class="label-form">2. Data Dukung / Referensi Harga (Opsional)</label>
+                        <p class="text-[10px] text-gray-400 mb-2">Format: PDF, DOC, XLS, JPG, PNG. Maks: 5MB</p>
+                        <input type="file" id="fileDataDukung_Sidebar" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" class="form-input text-xs" onchange="validateFile(this)">
+                    </div>
+                </div>
+                
+                <div class="pt-6 mt-6 border-t border-gray-100 flex justify-end">
+                    <button onclick="prosesUploadDokumen()" id="btnSubmitUpload" class="px-6 py-2.5 bg-blue-700 text-white rounded-xl text-sm font-bold hover:bg-blue-800 transition shadow-sm flex items-center">
+                        <i class="fas fa-cloud-upload-alt mr-2"></i> Simpan Dokumen
+                    </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= HALAMAN VERIFIKASI ================= -->
         <div id="verifikasiView" class="hidden p-4 md:p-10 space-y-6">
             <div class="max-w-6xl mx-auto space-y-6">
                 <!-- Header Info -->
@@ -300,7 +350,7 @@
                         <i class="fas fa-arrow-left mr-2"></i> Kembali
                     </button>
                     <div class="bg-yellow-100 text-yellow-800 px-4 py-2 rounded-lg text-sm font-bold shadow-sm border border-yellow-200">
-                        <i class="fas fa-clipboard-check mr-2"></i> Mode Verifikasi Admin
+                        <i class="fas fa-clipboard-check mr-2"></i> Mode Review / Verifikasi
                     </div>
                 </div>
 
@@ -318,6 +368,18 @@
                             <div class="w-full bg-gray-200 rounded-full h-2.5 mt-2">
                                 <div class="bg-blue-600 h-2.5 rounded-full" id="verifProgressBar" style="width: 0%"></div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Dokumen Pendukung Info -->
+                    <div class="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-100 flex gap-4 text-sm">
+                        <div>
+                            <span class="font-bold text-blue-800 block mb-1"><i class="fas fa-file-pdf mr-1"></i> File KAK/TOR</span>
+                            <a id="verifLinkKAK" href="#" target="_blank" class="text-blue-600 hover:underline">Lihat Dokumen</a>
+                        </div>
+                        <div class="border-l border-blue-200 pl-4">
+                            <span class="font-bold text-blue-800 block mb-1"><i class="fas fa-paperclip mr-1"></i> Data Dukung</span>
+                            <a id="verifLinkDukung" href="#" target="_blank" class="text-blue-600 hover:underline">Lihat Dokumen</a>
                         </div>
                     </div>
                 </div>
@@ -360,17 +422,22 @@
 
                 <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200 flex flex-col md:flex-row items-center justify-between sticky bottom-6 z-40">
                     <div class="mb-4 md:mb-0">
-                        <h3 class="font-bold text-gray-800">Selesaikan Verifikasi</h3>
-                        <p class="text-xs text-gray-500">Pastikan semua item telah direview (Disetujui/Koreksi) sebelum mengirim.</p>
+                        <h3 class="font-bold text-gray-800">Selesaikan Evaluasi</h3>
+                        <p class="text-xs text-gray-500">Pastikan semua item direview sebelum mengirim ke tahap selanjutnya.</p>
                     </div>
-                    <button onclick="simpanHasilVerifikasi()" class="w-full md:w-auto bg-blue-700 text-white px-8 py-3 rounded-xl font-bold shadow-md hover:bg-blue-800 transition flex items-center justify-center">
-                        <i class="fas fa-paper-plane mr-2"></i> Kirim Hasil Verifikasi
-                    </button>
+                    <div class="flex space-x-3">
+                        <button onclick="simpanHasilVerifikasi(false)" class="bg-red-100 text-red-700 px-6 py-3 rounded-xl font-bold hover:bg-red-200 transition">
+                            <i class="fas fa-undo mr-2"></i> Kembalikan (Koreksi)
+                        </button>
+                        <button onclick="simpanHasilVerifikasi(true)" class="bg-blue-700 text-white px-8 py-3 rounded-xl font-bold shadow-md hover:bg-blue-800 transition flex items-center">
+                            <i class="fas fa-paper-plane mr-2"></i> Setujui & Teruskan
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- ================= NEW RINCIAN VIEW: DAFTAR RINCIAN ================= -->
+        <!-- ================= DAFTAR RINCIAN VIEW ================= -->
         <div id="rincianView" class="hidden p-4 md:p-10 space-y-6">
           <div class="max-w-6xl mx-auto space-y-6">
             
@@ -392,8 +459,6 @@
                <h2 class="text-xl font-black text-slate-800 mb-2 w-11/12" id="rincianViewTitle">Nama Sub Kegiatan</h2>
                <div class="flex flex-wrap items-center text-sm gap-4 text-gray-600 mb-4 border-b pb-4">
                   <div><span class="font-bold text-xs uppercase text-gray-400 block mb-0.5">Indikator</span> <span id="rincianViewIndikator" class="font-medium">-</span></div>
-                  
-                  <!-- Area Target & Tombol Edit -->
                   <div>
                       <span class="font-bold text-xs uppercase text-gray-400 block mb-0.5">Target Output</span>
                       <div class="flex items-center">
@@ -423,7 +488,6 @@
                        </tr>
                     </thead>
                     <tbody id="rincianTableBody" class="divide-y divide-gray-100 bg-white">
-                       <!-- Data Rendered by JS -->
                     </tbody>
                  </table>
                </div>
@@ -432,7 +496,7 @@
             <!-- Tombol Simpan Final -->
             <div class="flex justify-end pt-4" id="rincianSaveWrapper">
                <button onclick="saveUsulanKeDatabase()" class="bg-blue-800 text-white px-8 py-3 rounded-xl text-sm font-bold shadow-md hover:bg-blue-900 transition flex items-center">
-                 <i class="fas fa-save mr-2"></i> Simpan Draft Usulan
+                 <i class="fas fa-save mr-2"></i> Simpan Draft Rincian
                </button>
             </div>
           </div>
@@ -499,7 +563,7 @@
           </div>
         </div>
 
-        <!-- RAB View -->
+        <!-- ================= RAB VIEW (STATIS, AMAN) ================= -->
         <div id="rabView" class="hidden min-h-screen p-4 md:p-10">
           <div id="rabAdminControl" class="max-w-5xl mx-auto bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-200 mb-6 flex flex-col md:flex-row items-center justify-between gap-4 no-print hidden">
             <div class="flex flex-col md:flex-row md:items-center w-full gap-3">
@@ -507,22 +571,33 @@
               <select id="selectRabBidang" onchange="generateRab()" class="form-input w-full md:w-64 text-sm font-semibold text-blue-900"><option value="ALL">Semua Unit Kerja</option></select>
             </div>
             <div class="flex gap-2 w-full md:w-auto mt-3 md:mt-0">
-              <button onclick="exportToExcel()" class="bg-green-600 text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-green-700 transition flex items-center shadow-sm justify-center"><i class="fas fa-file-excel mr-2"></i> Excel</button>
-              <button onclick="window.print()" class="bg-blue-800 text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-blue-900 transition flex items-center shadow-sm justify-center"><i class="fas fa-print mr-2"></i> Cetak</button>
+              <button id="btnExportAdmin" onclick="exportToExcel()" class="bg-green-600 text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-green-700 transition flex items-center shadow-sm justify-center"><i class="fas fa-file-excel mr-2"></i> Excel</button>
+              <button id="btnPrintAdmin" onclick="window.print()" class="bg-blue-800 text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-blue-900 transition flex items-center shadow-sm justify-center"><i class="fas fa-print mr-2"></i> Cetak</button>
             </div>
           </div>
 
           <div id="rabBidangControl" class="max-w-5xl mx-auto flex justify-end gap-2 mb-4 no-print hidden">
-              <button onclick="exportToExcel()" class="bg-green-600 text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-green-700 transition flex items-center shadow-sm"><i class="fas fa-file-excel mr-2"></i> Excel</button>
-              <button onclick="window.print()" class="bg-blue-800 text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-blue-900 transition flex items-center shadow-sm"><i class="fas fa-print mr-2"></i> Cetak</button>
+              <button id="btnExportBidang" onclick="exportToExcel()" class="bg-green-600 text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-green-700 transition flex items-center shadow-sm"><i class="fas fa-file-excel mr-2"></i> Excel</button>
+              <button id="btnPrintBidang" onclick="window.print()" class="bg-blue-800 text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-blue-900 transition flex items-center shadow-sm"><i class="fas fa-print mr-2"></i> Cetak</button>
           </div>
 
+          <!-- Banner Peringatan RAB Belum Disetujui -->
+          <div id="rabWarningBanner" class="max-w-5xl mx-auto hidden mb-4 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg shadow-sm no-print">
+             <div class="flex items-center">
+                 <i class="fas fa-exclamation-triangle text-yellow-500 mr-3 fa-lg"></i>
+                 <p class="text-sm text-yellow-700 font-medium"><strong>Perhatian:</strong> Terdapat usulan yang belum berstatus <b>DISETUJUI</b> oleh Admin. Dokumen RAB belum dapat dicetak/diunduh.</p>
+             </div>
+          </div>
+
+          <!-- Struktur Kertas RAB Statis -->
           <div class="rab-paper overflow-x-auto relative">
              <div class="text-center mb-6 font-bold uppercase tracking-wide leading-tight" style="font-family: Arial, sans-serif;">
                <div class="text-lg mb-1">RENCANA ANGGARAN BIAYA (RAB)</div>
                <div class="text-sm mb-1" id="rabSumberDanaTitle">TAHAPAN T.A. 2026</div>
                <div class="text-sm" id="rabUnitKerjaDisplay">SUB BAGIAN PERENCANAAN</div>
              </div>
+             
+             <!-- TABEL RAB -->
              <table id="exportRabTable" class="rab-excel-table min-w-[1200px]">
                <thead class="rab-header-green">
                  <tr>
@@ -537,8 +612,17 @@
                </thead>
                <tbody id="rabBody"></tbody>
              </table>
+             
+             <!-- TANDA TANGAN KABID DINAMIS -->
              <div class="mt-12 flex justify-end text-center text-xs mr-10" style="font-family: Arial, sans-serif;">
-                <div><p class="mb-16">Mengetahui<br>Kepala <span id="rabSignText">Sub Bagian Perencanaan</span></p><p class="font-bold underline">NAMA PEJABAT TERKAIT</p><p>NIP. ........................................</p></div>
+                <div style="width: 250px;">
+                    <p class="mb-2">Mengetahui<br>Kepala <span id="rabTtdBidang">Sub Bagian Perencanaan</span></p>
+                    <div id="rabTtdImageContainer" style="height: 65px; display: flex; align-items: center; justify-content: center;">
+                        <br><br><br>
+                    </div>
+                    <p class="font-bold underline uppercase mt-2" id="rabTtdNama">NAMA PEJABAT TERKAIT</p>
+                    <p>NIP. <span id="rabTtdNip">........................................</span></p>
+                </div>
              </div>
           </div>
         </div>
@@ -558,7 +642,7 @@
       <div class="p-6 space-y-5 bg-white">
          <div>
             <label class="label-form">Sub Kegiatan <span class="text-red-500">*</span></label>
-            <select id="selectSubKegiatan" placeholder="-- Pilih atau Cari Sub Kegiatan --"><option value="">-- Memuat Data... --</option></select>
+            <select id="selectSubKegiatan" placeholder="-- Pilih atau Cari Sub Kegiatan --"><option value=""></option></select>
          </div>
          <div>
             <label class="label-form">Indikator</label>
@@ -594,11 +678,11 @@
          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
                <label class="label-form">Sumber Dana <span class="text-red-500">*</span></label>
-               <select id="selectSumberDana" placeholder="-- Pilih Sumber Dana --"><option value="">-- Memuat Data... --</option></select>
+               <select id="selectSumberDana" placeholder="-- Pilih Sumber Dana --"><option value=""></option></select>
             </div>
             <div>
                <label class="label-form">Kode & Nama Rekening <span class="text-red-500">*</span></label>
-               <select id="selectRekening" placeholder="-- Pilih Rekening Belanja --"><option value="">-- Memuat Data... --</option></select>
+               <select id="selectRekening" placeholder="-- Pilih Rekening Belanja --"><option value=""></option></select>
             </div>
          </div>
 
@@ -649,6 +733,45 @@
     </div>
   </div>
 
+  <!-- MODAL 3: PERSETUJUAN KABID & UPLOAD TTD (DENGAN CROPPER) -->
+  <div id="modalApproveBidang" class="fixed inset-0 bg-gray-900 bg-opacity-60 z-modal hidden flex items-center justify-center px-4 no-print transition-opacity" style="backdrop-filter: blur(4px);">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
+        <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-signature text-blue-600 mr-2"></i> Persetujuan Kepala Bidang</h3>
+        <p class="text-xs text-gray-500 mt-1">Lengkapi identitas Anda sebagai bukti persetujuan dokumen RAB.</p>
+      </div>
+      <div class="p-6 space-y-4 bg-white">
+          <div>
+              <label class="label-form">Nama Lengkap Kepala Bidang <span class="text-red-500">*</span></label>
+              <input type="text" id="inputNamaKabid" class="form-input font-bold" placeholder="Gelar dan Nama Lengkap...">
+          </div>
+          <div>
+              <label class="label-form">NIP <span class="text-red-500">*</span></label>
+              <input type="text" id="inputNipKabid" class="form-input" placeholder="Nomor Induk Pegawai...">
+          </div>
+          <div>
+              <label class="label-form">Upload Tanda Tangan <span class="text-red-500">*</span></label>
+              <p class="text-[10px] text-gray-400 mb-2">Pilih gambar TTD Anda, lalu sesuaikan (crop) kotak di bawah ini.</p>
+              <input type="file" id="inputFileTTD" accept=".jpg,.jpeg,.png" class="form-input text-xs" onchange="initCropper(this)">
+          </div>
+          
+          <!-- CROPPER CONTAINER -->
+          <div id="cropperContainer" class="hidden mt-4">
+              <p class="text-[10px] font-bold text-gray-500 mb-1">Pratinjau & Potong Tanda Tangan:</p>
+              <div class="w-full h-40 border border-dashed border-gray-300 bg-gray-50 flex items-center justify-center overflow-hidden relative rounded">
+                  <img id="imageToCrop" src="" class="max-w-full max-h-full object-contain">
+              </div>
+          </div>
+          
+      </div>
+      <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end space-x-3">
+        <button onclick="closeModalApproveBidang()" class="px-5 py-2.5 bg-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-300">Batal</button>
+        <button id="btnSubmitTTD" onclick="confirmApproveBidang()" class="px-5 py-2.5 bg-blue-700 text-white rounded-xl text-sm font-bold hover:bg-blue-800 flex items-center">
+            <i class="fas fa-paper-plane mr-2"></i> Setujui & Teruskan
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Modal User -->
   <div id="userModal" class="fixed inset-0 bg-black bg-opacity-50 z-modal hidden flex items-center justify-center px-4 no-print">
@@ -723,56 +846,74 @@
 
   <div id="toastContainer" class="fixed bottom-6 right-6 z-toast flex flex-col gap-3 pointer-events-none no-print"></div>
 
-  <!-- Tom Select JS -->
+  <!-- SCRIPT TOM SELECT -->
   <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 
   <script>
-    // Global State
+    let globalSubKegiatan = [];
+    let globalSumberDana = [];
+    let globalRekening = [];
+    let globalSatuan = [];
+    
     const bidangList = ["Dalduk", "KB dan KS", "Keuangan dan Aset", "P2P", "Perencanaan", "Umum Kepegawaian dan Hukum", "Yankesmas dan Farmalkes"];
     let currentBidang = ""; 
     let currentUser = "";
     let currentLevel = "";
     let currentNama = "";
     
-    // Proposal State
-    let currentHeaderInfo = {}; // Menyimpan data header usulan yang sedang aktif
-    let tempRincian = []; // Menyimpan rincian usulan aktif
+    let currentHeaderInfo = {}; 
+    let tempRincian = []; 
     let editingDraftId = null; 
-    let editingRincianIndex = null; // Menyimpan index rincian yang sedang diedit (-1 berarti tambah baru)
+    let editingRincianIndex = null; 
     let proposalToDeleteId = null;
-    let isEditingTargetOnly = false; // Flag khusus edit target angka
+    let isEditingTargetOnly = false; 
     
-    // DB State
     let allData = [];     
     let allRincian = [];  
-    let allRekening = []; 
     let currentVerifikasiId = null;
     let verifikasiItems = [];
 
-    // Schedule State
     let sistemTahunAnggaran = new Date().getFullYear() + 1;
     let sistemTahapan = "APBD Murni";
     let sistemDeadline = "";
     let countdownInterval = null;
     let isScheduleActive = false; 
 
-    // Session State
     const SESSION_TIMEOUT = 30 * 60 * 1000; 
     let sessionCheckInterval = null;
     let userData = [];
     let editingUserOldUsername = null;
     
-    // Tom Select Instance
     let tsTahapan = null, tsSubKegiatan = null, tsSumberDana = null, tsRekening = null;
     let tsSatuan = [null, null, null, null];
     let defaultTahapanList = ["APBD Murni", "Pergeseran 1", "Pergeseran 2", "APBD Perubahan"];
 
-    // Chart instances
     let statusChartInstance = null;
     let barChartInstance = null;
+    
+    // Variabel global untuk instance Cropper
+    let cropper = null;
 
-    // UTILS SAFETY
-    // Mencegah error perhitungan akibat tipe data string (teks) dari Google Sheets
+    // FUNGSI UTILITIES
+    const runGasAsync = (funcName, ...args) => new Promise((resolve, reject) => {
+        google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[funcName](...args);
+    });
+
+    const getBase64 = (file) => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+
+    function validateFile(input) {
+        const file = input.files[0];
+        if (file && file.size > 5 * 1024 * 1024) {
+            showToast("Ukuran file maksimal 5MB!", "error");
+            input.value = ""; 
+        }
+    }
+
     const safeNum = (val) => {
         if (!val) return 0;
         if (typeof val === 'number') return val;
@@ -796,7 +937,7 @@
     function closeAlertModal() { document.getElementById('alertModal').classList.add('hidden'); }
 
     function closeAllModals() {
-        const modalIds = ['headerModal', 'rincianModal', 'userModal', 'logoutModal', 'deleteModal', 'kirimModal', 'alertModal'];
+        const modalIds = ['headerModal', 'rincianModal', 'userModal', 'logoutModal', 'deleteModal', 'kirimModal', 'alertModal', 'modalApproveBidang'];
         modalIds.forEach(id => {
             const el = document.getElementById(id);
             if (el) el.classList.add('hidden');
@@ -811,7 +952,7 @@
       setTimeout(() => t.classList.remove('translate-y-10', 'opacity-0'), 10);
       setTimeout(() => { t.classList.add('translate-y-10', 'opacity-0'); setTimeout(() => t.remove(), 300); }, 3000);
     }
-
+    
     // MANAJEMEN USER
     function initUserForm() {
         const select = document.getElementById('formBidang'); if (!select) return;
@@ -914,24 +1055,15 @@
             tsTahapan = null; 
         }
         
-        sel.innerHTML = '<option value="">-- Pilih atau Ketik Baru --</option>';
-        
-        defaultTahapanList.forEach(t => { 
-            sel.add(new Option(t, t)); 
-        });
+        sel.innerHTML = '<option value=""></option>';
+        defaultTahapanList.forEach(t => { sel.add(new Option(t, t)); });
         
         if (sistemTahapan && sistemTahapan !== "Belum Diatur" && !defaultTahapanList.includes(sistemTahapan)) {
             sel.add(new Option(sistemTahapan, sistemTahapan));
         }
         
-        tsTahapan = new TomSelect(sel, { 
-            create: true, 
-            placeholder: "Pilih atau Ketik Tahapan Baru..." 
-        });
-        
-        if(sistemTahapan && sistemTahapan !== "Belum Diatur") {
-            tsTahapan.setValue(sistemTahapan);
-        }
+        tsTahapan = new TomSelect(sel, { create: true, placeholder: "Pilih atau Ketik Tahapan Baru..." });
+        if(sistemTahapan && sistemTahapan !== "Belum Diatur") tsTahapan.setValue(sistemTahapan);
     }
     
     function togglePengaturanUI(isLocked) {
@@ -1020,7 +1152,7 @@
       countdownInterval = setInterval(update, 1000);
     }
 
-    // AUTH & SESSION
+    // AUTH
     function processLogin(e) {
         e.preventDefault();
         const u = document.getElementById('loginUsername').value.trim(), p = document.getElementById('loginPassword').value, btn = document.getElementById('btnSubmitLogin');
@@ -1030,12 +1162,10 @@
                 .withSuccessHandler(res => {
                     btn.disabled = false; btn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i> Masuk ke Sistem';
                     if (res && res.status === 'success') {
-                        currentBidang = res.bidang; 
-                        currentUser = res.username;
-                        currentNama = res.nama || res.username; 
+                        currentBidang = res.bidang; currentUser = res.username; currentNama = res.nama || res.username; 
                         
                         let lvl = res.level || "Level Program";
-                        if (res.bidang === 'Admin Verifikator') lvl = "Admin Verifikator"; // Bypass data lama
+                        if (res.bidang === 'Admin Verifikator') lvl = "Admin Verifikator"; 
                         if(lvl === 'Pengelola Program') lvl = "Level Program";
                         if(lvl === 'Kepala Bidang') lvl = "Level Bidang";
                         currentLevel = lvl;
@@ -1043,13 +1173,7 @@
                         setSession(currentBidang, currentUser, currentLevel, currentNama); 
                         
                         document.getElementById('loginView').classList.add('hidden'); document.getElementById('appContainer').classList.remove('hidden');
-                        updateRoleUI(); 
-                        switchView('listView'); 
-                        startSessionMonitor();
-                        
-                        // Menarik data ulang dari database khusus untuk pengguna yang baru login
-                        refreshAllData();
-                        
+                        updateRoleUI(); switchView('listView'); refreshAllData();
                         showToast("Anda telah berhasil login.");
                     } else showToast((res && res.message ? res.message : "Error"), "error");
                 })
@@ -1064,21 +1188,13 @@
     function closeLogoutModal() { document.getElementById('logoutModal').classList.add('hidden'); }
     
     function confirmLogout() { 
-        closeAllModals(); // Memastikan semua jendela pop-up tertutup saat logout
+        closeAllModals(); 
         currentBidang = ""; currentUser = ""; currentLevel = ""; currentNama = ""; 
+        allData = []; allRincian = []; tempRincian = [];
+        const tableBody = document.getElementById('tableBody'); if(tableBody) tableBody.innerHTML = '';
         
-        // KOSONGKAN SEMUA DATA DI MEMORI FRONTEND SAAT LOGOUT (Solusi agar tidak bocor)
-        allData = []; 
-        allRincian = []; 
-        tempRincian = [];
-        const tableBody = document.getElementById('tableBody');
-        if(tableBody) tableBody.innerHTML = '';
-        
-        // Kosongkan ulang tampilan dashboard (Optional)
-        document.getElementById('dashTotalUsulan').innerText = '0';
-        document.getElementById('dashTotalAnggaran').innerText = 'Rp 0';
-        document.getElementById('dashDisetujui').innerText = '0';
-        document.getElementById('dashProses').innerText = '0';
+        document.getElementById('dashTotalUsulan').innerText = '0'; document.getElementById('dashTotalAnggaran').innerText = 'Rp 0';
+        document.getElementById('dashDisetujui').innerText = '0'; document.getElementById('dashProses').innerText = '0';
 
         if (statusChartInstance) statusChartInstance.destroy();
         if (barChartInstance) barChartInstance.destroy();
@@ -1098,40 +1214,42 @@
         try {
             const d = localStorage.getItem('eplan_session'); if(!d) return null;
             const p = JSON.parse(d); 
-            if (!p || !p.timestamp || (Date.now() - p.timestamp > SESSION_TIMEOUT)) { 
-                localStorage.removeItem('eplan_session'); return null; 
-            }
-            if (p.bidang === 'Admin Verifikator') p.level = 'Admin Verifikator'; // Safety Check Data Lama
+            if (!p || !p.timestamp || (Date.now() - p.timestamp > SESSION_TIMEOUT)) { localStorage.removeItem('eplan_session'); return null; }
+            if (p.bidang === 'Admin Verifikator') p.level = 'Admin Verifikator'; 
             return p;
-        } catch(e) {
-            localStorage.removeItem('eplan_session'); return null;
-        }
+        } catch(e) { localStorage.removeItem('eplan_session'); return null; }
     }
     
     function updateRoleUI() {
       const isAdmin = checkIsAdmin();
+      const isKabid = (currentLevel === 'Level Bidang');
+      
       document.getElementById('displayBidangAtas').innerText = currentBidang || "Unit Kerja";
       document.getElementById('displayNamaUser').innerText = currentNama || currentUser || "-";
       
       document.getElementById('adminMenuSection').classList.toggle('hidden', !isAdmin);
-      // Tombol buat usulan bisa diakses Pengelola dan Kabid
-      document.getElementById('btnNavForm').classList.toggle('hidden', isAdmin);
-      document.getElementById('bidangActionButtons').classList.toggle('hidden', isAdmin);
+      
+      // HANYA Level Program yang bisa buat usulan & upload dokumen
+      const isProgram = !isAdmin && !isKabid;
+      document.getElementById('programMenuSection').classList.toggle('hidden', !isProgram);
+      document.getElementById('bidangActionButtons').classList.toggle('hidden', !isProgram);
+      
       loadData();
     }
 
     // NAVIGATION
     function switchView(id) {
-      ['listView', 'rincianView', 'rabView', 'pengaturanView', 'userView', 'verifikasiView'].forEach(v => {
+      ['listView', 'uploadView', 'rincianView', 'rabView', 'pengaturanView', 'userView', 'verifikasiView'].forEach(v => {
           const el = document.getElementById(v); if(el) el.classList.add('hidden');
       });
       const targetEl = document.getElementById(id); if(targetEl) targetEl.classList.remove('hidden');
       
-      ['btnNavList', 'btnNavRab', 'btnNavPengaturan', 'btnNavUser'].forEach(b => {
+      ['btnNavList', 'btnNavUpload', 'btnNavRab', 'btnNavPengaturan', 'btnNavUser'].forEach(b => {
           const elBtn = document.getElementById(b); if(elBtn) elBtn.classList.remove('active');
       });
 
       if(id === 'listView') { document.getElementById('btnNavList').classList.add('active'); loadData(); }
+      if(id === 'uploadView') { document.getElementById('btnNavUpload').classList.add('active'); populateUploadSelect(); }
       if(id === 'rabView') { document.getElementById('btnNavRab').classList.add('active'); generateRab(); }
       if(id === 'pengaturanView') { document.getElementById('btnNavPengaturan').classList.add('active'); setupTahapanDropdown(); }
       if(id === 'userView') { document.getElementById('btnNavUser').classList.add('active'); fetchUsers(); }
@@ -1144,23 +1262,16 @@
     }
 
     // =========================================================================
-    // LOGIKA INTEGRASI: HEADER DAN RINCIAN (POP UP & LIST)
+    // LOGIKA INTEGRASI: HEADER DAN RINCIAN
     // =========================================================================
 
-    // 1. HEADER USULAN (BUAT BARU / EDIT HEADER)
     function openHeaderModal() {
         const isAdmin = checkIsAdmin();
         if (!isScheduleActive && !isAdmin) { return showModalNotif("Akses Terkunci", "Maaf, jadwal pengajuan belum dibuka atau telah berakhir."); }
 
-        editingDraftId = null; 
-        currentHeaderInfo = { Status: 'DRAFT' };
-        isEditingTargetOnly = false;
+        editingDraftId = null; currentHeaderInfo = { Status: 'DRAFT' }; isEditingTargetOnly = false;
         
-        // Reset form
-        if(tsSubKegiatan) {
-            tsSubKegiatan.enable();
-            tsSubKegiatan.clear();
-        }
+        if(tsSubKegiatan) { tsSubKegiatan.enable(); tsSubKegiatan.clear(); }
         document.getElementById('inputTarget').value = '';
         document.getElementById('inputIndikator').value = '';
         document.getElementById('inputTargetSatuan').value = '';
@@ -1172,28 +1283,22 @@
         setTimeout(() => { if(tsSubKegiatan) tsSubKegiatan.sync(); }, 50);
     }
     
-    // FUNGSI BARU KHUSUS UNTUK EDIT TARGET SAJA (Dari Rincian View)
     function openEditTargetModal() {
         isEditingTargetOnly = true;
         document.getElementById('headerModalTitleText').innerHTML = '<i class="fas fa-edit text-blue-600 mr-2"></i> Edit Target Output Usulan';
         document.getElementById('btnSubmitHeader').innerHTML = '<i class="fas fa-save mr-2"></i> Simpan Target';
         
-        if(tsSubKegiatan) {
-            tsSubKegiatan.setValue(currentHeaderInfo.Sub_Kegiatan);
-            tsSubKegiatan.disable(); // Kunci Dropdown agar tidak bisa diubah
-        }
+        if(tsSubKegiatan) { tsSubKegiatan.setValue(currentHeaderInfo.Sub_Kegiatan); tsSubKegiatan.disable(); }
         document.getElementById('inputIndikator').value = currentHeaderInfo.Indikator || '';
         
-        let targetParts = (currentHeaderInfo.Target || "").trim().split(" ");
+        let targetParts = String(currentHeaderInfo.Target || "").trim().split(" ");
         document.getElementById('inputTarget').value = targetParts[0] || '';
         document.getElementById('inputTargetSatuan').value = targetParts.slice(1).join(" ") || '';
         
         document.getElementById('headerModal').classList.remove('hidden');
     }
 
-    function closeHeaderModal() {
-        document.getElementById('headerModal').classList.add('hidden');
-    }
+    function closeHeaderModal() { document.getElementById('headerModal').classList.add('hidden'); }
 
     function lanjutKeRincian() {
         const sk = document.getElementById('selectSubKegiatan').value;
@@ -1204,102 +1309,81 @@
         if(!sk || !targetNum) return showToast("Lengkapi Sub Kegiatan dan Target!", "error");
         
         if (isEditingTargetOnly) {
-            // Update khusus hanya untuk target pada draft aktif tanpa reset rincian
             currentHeaderInfo.Target = targetNum + " " + targetSatuan;
-            closeHeaderModal();
-            renderRincianView();
+            closeHeaderModal(); renderRincianView();
             showToast("Target angka berhasil diubah! (Klik Simpan Draft untuk mempermanenkan)");
             return;
         }
         
-        // KEY PAYLOAD HARUS SESUAI COLUMN_MAP (BUAT BARU)
         currentHeaderInfo = {
-            ID_Usulan: editingDraftId || "",
-            Bidang: currentBidang,
-            Pembuat: currentUser, // Tracking ownership
-            Sub_Kegiatan: sk,
-            Target: targetNum + " " + targetSatuan,
-            Indikator: indikatorVal,
-            Status: currentHeaderInfo.Status || 'DRAFT',
-            Total_Anggaran: 0
+            ID_Usulan: editingDraftId || "", Bidang: currentBidang, Pembuat: currentUser, 
+            Sub_Kegiatan: sk, Target: targetNum + " " + targetSatuan, Indikator: indikatorVal, Status: currentHeaderInfo.Status || 'DRAFT', Total_Anggaran: 0
         };
 
-        if(!editingDraftId) { tempRincian = []; } // Jika usulan baru, rincian kosong
+        if(!editingDraftId) { tempRincian = []; } 
         
-        closeHeaderModal();
-        renderRincianView();
-        switchView('rincianView');
+        closeHeaderModal(); openRincianView();
     }
 
-    // 2. TAMPILAN RINCIAN VIEW (LIST RINCIAN)
-    function openRincianView(idUsulan) {
-        const header = allData.find(d => d.ID_Usulan === idUsulan); if(!header) return;
-        editingDraftId = idUsulan;
-        currentHeaderInfo = Object.assign({}, header);
-        
-        // Tarik data rincian dari array global
-        const items = allRincian.filter(r => r.ID_Usulan === idUsulan); 
-        tempRincian = JSON.parse(JSON.stringify(items)); 
-        
-        renderRincianView();
-        switchView('rincianView');
+    function openRincianView(idUsulan = null) {
+        if(idUsulan) {
+            const header = allData.find(d => d.ID_Usulan === idUsulan); if(!header) return;
+            editingDraftId = idUsulan; currentHeaderInfo = Object.assign({}, header);
+            const items = allRincian.filter(r => r.ID_Usulan === idUsulan); 
+            tempRincian = JSON.parse(JSON.stringify(items)); 
+        }
+        renderRincianView(); switchView('rincianView');
     }
 
     function renderRincianView() {
-        // Update Title & Badge
-        document.getElementById('rincianViewTitle').innerText = currentHeaderInfo.Sub_Kegiatan;
+        document.getElementById('rincianViewTitle').innerText = currentHeaderInfo.Sub_Kegiatan || '-';
         document.getElementById('rincianViewIndikator').innerText = currentHeaderInfo.Indikator || '-';
         document.getElementById('rincianViewTarget').innerText = currentHeaderInfo.Target || '-';
         
-        const badge = document.getElementById('rincianViewStatusBadge');
-        badge.innerText = currentHeaderInfo.Status;
-        badge.className = "absolute top-0 right-0 px-4 py-2 text-white font-bold text-[10px] tracking-widest uppercase rounded-bl-xl shadow-sm " + 
-                          (currentHeaderInfo.Status === 'DISETUJUI' ? 'bg-green-600' : 
-                          (currentHeaderInfo.Status === 'VERIFIKASI' ? 'bg-yellow-500' : 
-                          (currentHeaderInfo.Status === 'KOREKSI' ? 'bg-orange-500' : 'bg-gray-500')));
+        let statLabel = String(currentHeaderInfo.Status || 'DRAFT');
+        let statColor = 'bg-gray-500'; 
+        if(statLabel === 'KOREKSI PROGRAM') statColor = 'bg-rose-500';
+        if(statLabel === 'DIAJUKAN KE BIDANG') statColor = 'bg-sky-600';
+        if(statLabel === 'KOREKSI BIDANG') statColor = 'bg-yellow-600';
+        if(statLabel === 'DIAJUKAN KE ADMIN') statColor = 'bg-orange-500';
+        if(statLabel === 'DISETUJUI') statColor = 'bg-green-600';
 
-        // Evaluasi Kunci (Enable/Disable Aksi)
-        const isAdmin = checkIsAdmin();
-        // Boleh edit jika dia bukan admin, jadwal aktif (atau admin diabaikan), dan status Draft/Koreksi
-        const isEditable = !isAdmin && (isScheduleActive || isAdmin) && (currentHeaderInfo.Status === 'DRAFT' || currentHeaderInfo.Status === 'KOREKSI');
+        const badge = document.getElementById('rincianViewStatusBadge');
+        badge.innerText = statLabel;
+        badge.className = `absolute top-0 right-0 px-4 py-2 text-white font-bold text-[10px] tracking-widest uppercase rounded-bl-xl shadow-sm ${statColor}`;
+
+        const isAdmin = checkIsAdmin(); const isKabid = (currentLevel === 'Level Bidang');
+        
+        let isEditable = false;
+        if (!isAdmin && !isKabid && (statLabel === 'DRAFT' || statLabel === 'KOREKSI PROGRAM')) isEditable = true;
+        if (isKabid && (statLabel === 'DIAJUKAN KE BIDANG' || statLabel === 'KOREKSI BIDANG')) isEditable = true;
 
         document.getElementById('btnTambahRincian').classList.toggle('hidden', !isEditable);
         document.getElementById('rincianSaveWrapper').classList.toggle('hidden', !isEditable);
         
-        // Atur kemunculan tombol edit pensil pada blok Target Header
         const targetEditBtn = document.getElementById('btnEditTarget');
         if(targetEditBtn) targetEditBtn.classList.toggle('hidden', !isEditable);
 
-        // Render Table
-        const tbody = document.getElementById('rincianTableBody');
-        let total = 0;
+        const tbody = document.getElementById('rincianTableBody'); let total = 0;
 
         if (tempRincian.length === 0) {
             tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-400 italic font-medium">Belum ada rincian belanja. Silakan tambah rincian.</td></tr>`;
         } else {
             tbody.innerHTML = tempRincian.map((it, idx) => {
                 const subTotalItem = safeNum(it.Sub_Total);
-                const hargaSatuanItem = safeNum(it.Harga_Satuan);
                 total += subTotalItem;
                 
-                // Cari Nama Rekening berdasarkan Kode Rekening dengan pembersihan spasi
                 const rek = allRekening.find(r => String(r.Kode_Rekening).trim() === String(it.Kode_Rekening).trim());
                 const namaRekening = rek ? rek.Nama_Rekening : "Rekening Tidak Ditemukan";
 
-                const isKoreksi = it.Status_Item === 'KOREKSI';
-                const isDisetujui = it.Status_Item === 'DISETUJUI';
+                const isKoreksi = it.Status_Item === 'KOREKSI'; const isDisetujui = it.Status_Item === 'DISETUJUI';
                 
                 let statusBadge = "";
-                if (isKoreksi) {
-                    statusBadge = `<span class="bg-red-100 text-red-700 text-[10px] px-2 py-0.5 rounded font-bold border border-red-200 inline-flex items-center"><i class="fas fa-exclamation-triangle mr-1"></i> Perlu Koreksi</span>`;
-                } else if (isDisetujui) {
-                    statusBadge = `<span class="bg-green-100 text-green-700 text-[10px] px-2 py-0.5 rounded font-bold border border-green-200 inline-flex items-center"><i class="fas fa-check-circle mr-1"></i> Disetujui</span>`;
-                }
+                if (isKoreksi) statusBadge = `<span class="bg-red-100 text-red-700 text-[10px] px-2 py-0.5 rounded font-bold border border-red-200 inline-flex items-center"><i class="fas fa-exclamation-triangle mr-1"></i> Perlu Koreksi</span>`;
+                else if (isDisetujui) statusBadge = `<span class="bg-green-100 text-green-700 text-[10px] px-2 py-0.5 rounded font-bold border border-green-200 inline-flex items-center"><i class="fas fa-check-circle mr-1"></i> Disetujui</span>`;
 
                 let catatanBox = "";
-                if (isKoreksi && it.Catatan) {
-                    catatanBox = `<div class="mt-2 p-2 bg-red-50 border border-red-200 text-xs text-red-700 rounded-lg flex items-start"><i class="fas fa-comment-dots mt-0.5 mr-2"></i> <div><b>Catatan Admin:</b><br>${it.Catatan}</div></div>`;
-                }
+                if (isKoreksi && it.Catatan) catatanBox = `<div class="mt-2 p-2 bg-red-50 border border-red-200 text-xs text-red-700 rounded-lg flex items-start"><i class="fas fa-comment-dots mt-0.5 mr-2"></i> <div><b>Catatan Koreksi:</b><br>${it.Catatan}</div></div>`;
 
                 let rowClasses = isKoreksi ? "border-b bg-red-50/40 hover:bg-red-50 transition" : "border-b hover:bg-blue-50/50 transition";
 
@@ -1307,19 +1391,13 @@
                 <tr class="${rowClasses}">
                     <td class="p-4 text-center font-bold ${isKoreksi ? 'text-red-400' : 'text-gray-400'}">${idx+1}</td>
                     <td class="p-4 min-w-[250px] whitespace-normal">
-                        <div class="flex items-center gap-2 mb-1">
-                            <div class="font-bold text-blue-800 text-xs">[ # ] ${it.Sumber_Dana}</div>
-                            ${statusBadge}
-                        </div>
+                        <div class="flex items-center gap-2 mb-1"><div class="font-bold text-blue-800 text-xs">[ # ] ${it.Sumber_Dana}</div>${statusBadge}</div>
                         <div class="ml-4 text-sm font-semibold ${isKoreksi ? 'text-red-800' : 'text-gray-800'}">[ - ] ${it.Keterangan || 'Tanpa Keterangan'} <br><span class="text-xs text-gray-500 font-normal italic">${it.Komponen}${it.Spesifikasi ? ' - ' + it.Spesifikasi : ''}</span></div>
                         <div class="ml-4 mt-1.5 text-[10px] text-gray-500 font-mono bg-gray-100 px-2 py-1 rounded inline-block"><i class="fas fa-wallet mr-1"></i> ${it.Kode_Rekening} - ${namaRekening}</div>
                         ${catatanBox}
                     </td>
-                    <td class="p-4 text-center">
-                        <span class="font-bold text-gray-800">${it.Volume}</span><br>
-                        <span class="text-[10px] text-gray-400">${it.Koefisien}</span>
-                    </td>
-                    <td class="p-4 text-right font-medium text-gray-600">${hargaSatuanItem.toLocaleString('id-ID')}</td>
+                    <td class="p-4 text-center"><span class="font-bold text-gray-800">${it.Volume}</span><br><span class="text-[10px] text-gray-400">${it.Koefisien}</span></td>
+                    <td class="p-4 text-right font-medium text-gray-600">${safeNum(it.Harga_Satuan).toLocaleString('id-ID')}</td>
                     <td class="p-4 text-right font-black text-blue-700">${subTotalItem.toLocaleString('id-ID')}</td>
                     <td class="p-4 text-center whitespace-nowrap">
                         <button onclick="openRincianModal('VIEW', ${idx})" class="text-indigo-500 mx-1 bg-indigo-50 p-2 rounded hover:bg-indigo-100 transition" title="Lihat Rincian"><i class="fas fa-search"></i></button>
@@ -1333,22 +1411,18 @@
                             `
                         ) : ''}
                     </td>
-                </tr>
-                `;
+                </tr>`;
             }).join('');
         }
-
         document.getElementById('rincianViewTotal').innerText = formatRp(total);
     }
 
-    // 3. FORM INPUT RINCIAN (MODAL)
     function openRincianModal(mode, index = -1) {
         editingRincianIndex = index;
         const modal = document.getElementById('rincianModal');
         const title = document.getElementById('rincianModalTitle');
         const btnSimpan = document.getElementById('btnSimpanRincian');
         const btnBatal = document.getElementById('btnBatalRincian');
-        
         const formElements = ['inputKomponen', 'inputSpesifikasi', 'inputKeterangan', 'hargaSatuan', 'jml1', 'jml2', 'jml3', 'jml4'];
 
         const setFieldState = (isDisabled) => {
@@ -1362,14 +1436,11 @@
 
         if (mode === 'NEW') {
             title.innerHTML = '<i class="fas fa-plus text-blue-600 mr-2"></i> Tambah Rincian Baru';
-            if(tsSumberDana) tsSumberDana.clear();
-            if(tsRekening) tsRekening.clear();
-            tsSatuan.forEach(ts => { if(ts) ts.clear(); });
+            if(tsSumberDana) tsSumberDana.clear(); if(tsRekening) tsRekening.clear(); tsSatuan.forEach(ts => { if(ts) ts.clear(); });
             formElements.forEach(id => { document.getElementById(id).value = ''; });
             document.getElementById('displaySubTotal').innerText = "Rp 0";
             setFieldState(false);
         } else {
-            // EDIT ATAU VIEW
             title.innerHTML = mode === 'VIEW' ? '<i class="fas fa-search text-indigo-600 mr-2"></i> Detail Rincian' : '<i class="fas fa-edit text-blue-600 mr-2"></i> Edit Rincian';
             const it = tempRincian[index];
             
@@ -1381,33 +1452,24 @@
                 document.getElementById('inputKeterangan').value = it.Keterangan;
                 document.getElementById('hargaSatuan').value = safeNum(it.Harga_Satuan);
                 
-                // Parse Koefisien
                 tsSatuan.forEach(ts => { if(ts) ts.clear(); });
                 [1,2,3,4].forEach(i => { document.getElementById('jml'+i).value = ''; });
                 
-                let koefParts = it.Koefisien.split(' x ');
+                let koefParts = String(it.Koefisien || "").split(' x ');
                 koefParts.forEach((part, i) => {
                     if (i < 4) {
-                        let num = safeNum(part); // Mengambil hanya angkanya
+                        let num = safeNum(part); 
                         let text = part.replace(/[0-9.-]/g, '').trim();
                         document.getElementById('jml'+(i+1)).value = num === 0 ? '' : num;
-                        if (text && tsSatuan[i]) {
-                            tsSatuan[i].addOption({value: text, text: text});
-                            tsSatuan[i].setValue(text);
-                        }
+                        if (text && tsSatuan[i]) { tsSatuan[i].addOption({value: text, text: text}); tsSatuan[i].setValue(text); }
                     }
                 });
 
-                calculateSubTotal();
-                setFieldState(mode === 'VIEW');
+                calculateSubTotal(); setFieldState(mode === 'VIEW');
             }, 100);
         }
-
         modal.classList.remove('hidden');
-        setTimeout(() => {
-            if(tsSumberDana) tsSumberDana.sync();
-            if(tsRekening) tsRekening.sync();
-        }, 50);
+        setTimeout(() => { if(tsSumberDana) tsSumberDana.sync(); if(tsRekening) tsRekening.sync(); }, 50);
     }
 
     function closeRincianModal() { document.getElementById('rincianModal').classList.add('hidden'); }
@@ -1429,72 +1491,44 @@
       let v = 1, kf = []; 
       [1,2,3,4].forEach(i => { 
           let val = parseFloat(document.getElementById('jml'+i).value); 
-          if(val > 0) { 
-              v *= val; 
-              let unit = document.getElementById('sat'+i).value; 
-              kf.push(val + (unit ? " " + unit : "")); 
-          } 
+          if(val > 0) { v *= val; let unit = document.getElementById('sat'+i).value; kf.push(val + (unit ? " " + unit : "")); } 
       });
 
-      // KEY PAYLOAD HARUS SESUAI COLUMN_MAP
       const newItem = { 
           ID_Rincian: editingRincianIndex !== -1 ? tempRincian[editingRincianIndex].ID_Rincian : "",
-          ID_Usulan: currentHeaderInfo.ID_Usulan || "",
-          Kode_Rekening: r, 
-          Sumber_Dana: d, 
-          Komponen: k, 
-          Spesifikasi: document.getElementById('inputSpesifikasi').value, 
-          Volume: v || 1, 
-          Harga_Satuan: h, 
-          Sub_Total: (v||1)*h, 
-          Koefisien: kf.join(' x ') || '1 Unit', 
-          Keterangan: document.getElementById('inputKeterangan').value, 
+          ID_Usulan: currentHeaderInfo.ID_Usulan || "", Kode_Rekening: r, Sumber_Dana: d, Komponen: k, Spesifikasi: document.getElementById('inputSpesifikasi').value, 
+          Volume: v || 1, Harga_Satuan: h, Sub_Total: (v||1)*h, Koefisien: kf.join(' x ') || '1 Unit', Keterangan: document.getElementById('inputKeterangan').value, 
           Catatan: editingRincianIndex !== -1 ? tempRincian[editingRincianIndex].Catatan : '',
           Status_Item: editingRincianIndex !== -1 ? tempRincian[editingRincianIndex].Status_Item : 'Aktif'
       };
 
-      if (editingRincianIndex === -1) {
-          tempRincian.push(newItem);
-          showToast("Item berhasil ditambahkan.");
-      } else {
-          tempRincian[editingRincianIndex] = newItem;
-          showToast("Item berhasil diperbarui.");
-      }
+      if (editingRincianIndex === -1) { tempRincian.push(newItem); showToast("Item berhasil ditambahkan."); } 
+      else { tempRincian[editingRincianIndex] = newItem; showToast("Item berhasil diperbarui."); }
 
-      closeRincianModal();
-      renderRincianView();
+      closeRincianModal(); renderRincianView();
     }
 
     function hapusRincianTemp(index) {
         if(confirm("Hapus rincian ini?")) {
             const item = tempRincian[index];
-            // Hapus juga di database backend jika item ini dulunya sudah pernah di-save (punya ID_Rincian)
-            if (item.ID_Rincian && typeof google !== 'undefined') {
-                google.script.run.deleteRincian(item.ID_Rincian, item.ID_Usulan);
-            }
-            tempRincian.splice(index, 1);
-            renderRincianView();
+            if (item.ID_Rincian && typeof google !== 'undefined') { google.script.run.deleteRincian(item.ID_Rincian, item.ID_Usulan); }
+            tempRincian.splice(index, 1); renderRincianView();
         }
     }
 
-    // 4. BATCH SAVE: SIMPAN USULAN KE DATABASE
     function saveUsulanKeDatabase() {
       if (tempRincian.length === 0) return showToast("Tambahkan minimal 1 Rincian Belanja!", "error");
       
       currentHeaderInfo.Total_Anggaran = tempRincian.reduce((s,i)=>s+safeNum(i.Sub_Total), 0);
       showToast("Menyimpan draft usulan...");
-      
+
       const loaderIcon = document.getElementById('globalLoader');
       if(loaderIcon) loaderIcon.classList.remove('hidden');
 
       if (typeof google !== 'undefined' && google.script) {
-          // 1. Simpan Header terlebih dahulu
           google.script.run.withSuccessHandler(resUsulan => {
               if (resUsulan && resUsulan.status === 'success') {
-                  const idUsulanSaved = resUsulan.id;
-                  let savedCount = 0;
-                  
-                  // 2. Lakukan perulangan untuk menyimpan tiap rincian satu persatu dengan ID_Usulan yang sama
+                  const idUsulanSaved = resUsulan.id; let savedCount = 0;
                   tempRincian.forEach((item) => {
                       item.ID_Usulan = idUsulanSaved;
                       google.script.run.withSuccessHandler(() => {
@@ -1502,8 +1536,7 @@
                           if (savedCount === tempRincian.length) {
                               if(loaderIcon) loaderIcon.classList.add('hidden');
                               showToast("Draft Usulan & Rincian berhasil disimpan!");
-                              closeAllModals();
-                              refreshAllData(); // Ambil ulang data segar dari server
+                              closeAllModals(); refreshAllData(); 
                           }
                       }).saveRincian(item);
                   });
@@ -1515,187 +1548,118 @@
       }
     }
 
+    // =====================================
+    // UPLOAD DOKUMEN OLEH PENGELOLA PROGRAM
+    // =====================================
+    function populateUploadSelect() {
+        const sel = document.getElementById('selectUsulanUpload');
+        if(!sel) return;
+        sel.innerHTML = '<option value="">-- Pilih Usulan (Tersimpan) --</option>';
+        
+        let drafts = allData.filter(d => (d.Status === 'DRAFT' || d.Status === 'KOREKSI PROGRAM') && d.Bidang === currentBidang && d.Pembuat === currentUser);
+        drafts.forEach(d => { sel.add(new Option(`${d.Sub_Kegiatan} (${d.Status})`, d.ID_Usulan)); });
+    }
+
+    async function prosesUploadDokumen() {
+        const idUsulan = document.getElementById('selectUsulanUpload').value;
+        const fileKAK = document.getElementById('fileKAK_Sidebar').files[0];
+        const fileDukung = document.getElementById('fileDataDukung_Sidebar').files[0];
+        
+        if(!idUsulan) return showToast("Pilih usulan terlebih dahulu!", "error");
+        if(!fileKAK) return showToast("File TOR/KAK Wajib diisi!", "error");
+        
+        const btn = document.getElementById('btnSubmitUpload');
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Mengunggah...';
+        
+        try {
+            let linkKak = ""; let linkDukung = "";
+            if (fileKAK) {
+              const base64KAK = await getBase64(fileKAK);
+              const fileNameKAK = `KAK_${currentBidang.replace(/[^a-zA-Z0-9]/g,'')}_${new Date().getTime()}_${fileKAK.name}`;
+              const resKAK = await runGasAsync('uploadFileToDrive', base64KAK, fileNameKAK);
+              if(resKAK.status === 'success') linkKak = resKAK.url; else throw new Error("Gagal upload KAK: " + resKAK.message);
+            }
+            if (fileDukung) {
+              const base64Dukung = await getBase64(fileDukung);
+              const fileNameDukung = `Dukung_${currentBidang.replace(/[^a-zA-Z0-9]/g,'')}_${new Date().getTime()}_${fileDukung.name}`;
+              const resDukung = await runGasAsync('uploadFileToDrive', base64Dukung, fileNameDukung);
+              if(resDukung.status === 'success') linkDukung = resDukung.url; else throw new Error("Gagal upload Data Dukung: " + resDukung.message);
+            }
+            const resUpdate = await runGasAsync('updateLampiranUsulan', idUsulan, linkKak, linkDukung);
+            if(resUpdate.status === 'success') {
+                showToast("Dokumen berhasil diupload!");
+                document.getElementById('fileKAK_Sidebar').value = ""; document.getElementById('fileDataDukung_Sidebar').value = "";
+                refreshAllData();
+            } else { throw new Error(resUpdate.message); }
+        } catch (err) { showToast(err.message, "error"); } finally {
+            btn.disabled = false; btn.innerHTML = '<i class="fas fa-cloud-upload-alt mr-2"></i> Simpan Dokumen';
+        }
+    }
+
+
     // RENDER INTERACTIVE CHARTS
     function renderCharts(filteredData) {
         const isAdmin = checkIsAdmin();
+        try {
+            if (statusChartInstance) statusChartInstance.destroy();
+            if (barChartInstance) barChartInstance.destroy();
 
-        // Destroy previous charts to avoid canvas overwrite issues
-        if (statusChartInstance) statusChartInstance.destroy();
-        if (barChartInstance) barChartInstance.destroy();
+            let statusTotals = { 'DRAFT': 0, 'KOREKSI': 0, 'VERIFIKASI': 0, 'DISETUJUI': 0 };
+            filteredData.forEach(d => {
+                let stat = String(d.Status || 'DRAFT');
+                if(stat.includes('KOREKSI')) stat = 'KOREKSI';
+                if(stat.includes('DIAJUKAN')) stat = 'VERIFIKASI';
+                if (statusTotals[stat] !== undefined) statusTotals[stat] += safeNum(d.Total_Anggaran);
+            });
 
-        // 1. DOUGHNUT CHART: Status Proporsi
-        let statusTotals = { 'DRAFT': 0, 'KOREKSI': 0, 'VERIFIKASI': 0, 'DISETUJUI': 0 };
-        filteredData.forEach(d => {
-            let stat = d.Status || 'DRAFT';
-            if (statusTotals[stat] !== undefined) {
-                statusTotals[stat] += safeNum(d.Total_Anggaran);
-            }
-        });
-
-        const ctxStatus = document.getElementById('statusChart').getContext('2d');
-        statusChartInstance = new Chart(ctxStatus, {
-            type: 'doughnut',
-            data: {
-                labels: ['Draft', 'Perlu Koreksi', 'Dalam Verifikasi', 'Disetujui'],
-                datasets: [{
-                    data: [statusTotals['DRAFT'], statusTotals['KOREKSI'], statusTotals['VERIFIKASI'], statusTotals['DISETUJUI']],
-                    backgroundColor: ['#E2E8F0', '#FDBA74', '#FDE047', '#86EFAC'],
-                    borderWidth: 2,
-                    hoverOffset: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11, family: 'Inter' } } },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) label += ': ';
-                                if (context.parsed !== null) {
-                                    label += new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(context.parsed);
-                                }
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-
-        // 2. BAR CHART: Distribusi Anggaran
-        let barData = {};
-        filteredData.forEach(d => {
-            // Admin melihat per Bidang. Selain admin melihat per Sub Kegiatan.
-            let key = isAdmin ? d.Bidang : d.Sub_Kegiatan;
-            if (!key) key = 'Lainnya';
-            if (!barData[key]) barData[key] = 0;
-            barData[key] += safeNum(d.Total_Anggaran);
-        });
-
-        // Sort Top 10 Descending
-        let sortedBar = Object.entries(barData).sort((a,b) => b[1] - a[1]).slice(0, 10);
-        let barLabels = sortedBar.map(item => item[0]);
-        let barValues = sortedBar.map(item => item[1]);
-
-        document.getElementById('barChartTitle').innerText = isAdmin ? 'Top 10 Anggaran per Unit Kerja' : 'Top 10 Anggaran per Sub Kegiatan';
-
-        const ctxBar = document.getElementById('barChart').getContext('2d');
-        barChartInstance = new Chart(ctxBar, {
-            type: 'bar',
-            data: {
-                labels: barLabels,
-                datasets: [{
-                    label: 'Total Anggaran',
-                    data: barValues,
-                    backgroundColor: [
-                        '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', 
-                        '#ec4899', '#f43f5e', '#f97316', '#f59e0b', '#eab308'
-                    ],
-                    borderRadius: 6,
-                    borderSkipped: false
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            title: function(context) {
-                                // Tampilkan nama lengkap di tooltip
-                                return context[0].label;
-                            },
-                            label: function(context) {
-                                let val = context.parsed.y;
-                                return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
-                            }
-                        }
-                    }
+            const ctxStatus = document.getElementById('statusChart').getContext('2d');
+            statusChartInstance = new Chart(ctxStatus, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Draft', 'Dalam Koreksi', 'Sedang Diverifikasi', 'Disetujui'],
+                    datasets: [{
+                        data: [statusTotals['DRAFT'], statusTotals['KOREKSI'], statusTotals['VERIFIKASI'], statusTotals['DISETUJUI']],
+                        backgroundColor: ['#E2E8F0', '#FDBA74', '#FDE047', '#86EFAC'],
+                        borderWidth: 2, hoverOffset: 6
+                    }]
                 },
-                scales: {
-                    x: {
-                        ticks: {
-                            font: { family: 'Inter', size: 10 },
-                            callback: function(value) {
-                                // Potong label x-axis jika kepanjangan (agar tidak merusak UI)
-                                let label = this.getLabelForValue(value);
-                                return label.length > 15 ? label.substr(0, 15) + '...' : label;
-                            }
-                        },
-                        grid: { display: false }
-                    },
-                    y: {
-                        ticks: {
-                            font: { family: 'Inter', size: 10 },
-                            callback: function(value) {
-                                if (value >= 1000000000) return 'Rp ' + (value / 1000000000).toFixed(1) + ' M';
-                                if (value >= 1000000) return 'Rp ' + (value / 1000000).toFixed(0) + ' Jt';
-                                return value;
-                            }
-                        },
-                        beginAtZero: true,
-                        border: { display: false }
-                    }
-                }
-            }
-        });
-    }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11, family: 'Inter' } } }, tooltip: { callbacks: { label: function(context) { let label = context.label || ''; if (label) label += ': '; if (context.parsed !== null) { label += new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(context.parsed); } return label; } } } } }
+            });
 
-    // DATA LOADING (DASHBOARD & TABEL)
-    function refreshAllData() {
-        const loader = document.getElementById('globalLoader');
-        if(loader) loader.classList.remove('hidden');
-        
-        if (typeof google !== 'undefined' && google.script) {
-            // Override request level untuk compatibility akun admin lama
-            let reqLevel = currentLevel;
-            if (currentBidang === 'Admin Verifikator') reqLevel = 'Admin Verifikator';
+            let barData = {};
+            filteredData.forEach(d => {
+                let key = isAdmin ? d.Bidang : d.Sub_Kegiatan;
+                if (!key) key = 'Lainnya'; if (!barData[key]) barData[key] = 0; barData[key] += safeNum(d.Total_Anggaran);
+            });
 
-            // Mengambil semua Data Usulan
-            google.script.run.withSuccessHandler(resU => {
-                if(resU && resU.status === 'success') {
-                    allData = (resU.data ? resU.data : []);
-                }
-                
-                // Mengambil semua Data Rincian untuk RAB / Verifikasi (Panggil tanpa ID untuk load semua)
-                google.script.run.withSuccessHandler(resR => {
-                    if(resR && resR.status === 'success') {
-                        allRincian = (resR.data ? resR.data : []);
-                    }
-                    if(loader) loader.classList.add('hidden');
-                    loadData(); // Render dashboard/tabel UI
-                }).getRincianData();
-            }).getUsulanData(currentBidang, currentUser, reqLevel); // PANGGIL DENGAN DATA SESSION BARU
-        }
+            let sortedBar = Object.entries(barData).sort((a,b) => b[1] - a[1]).slice(0, 10);
+            let barLabels = sortedBar.map(item => item[0]); let barValues = sortedBar.map(item => item[1]);
+
+            document.getElementById('barChartTitle').innerText = isAdmin ? 'Top 10 Anggaran per Unit Kerja' : 'Top 10 Anggaran per Sub Kegiatan';
+
+            const ctxBar = document.getElementById('barChart').getContext('2d');
+            barChartInstance = new Chart(ctxBar, {
+                type: 'bar',
+                data: { labels: barLabels, datasets: [{ label: 'Total Anggaran', data: barValues, backgroundColor: ['#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e', '#f97316', '#f59e0b', '#eab308'], borderRadius: 6, borderSkipped: false }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { title: function(context) { return context[0].label; }, label: function(context) { return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(context.parsed.y); } } } }, scales: { x: { ticks: { font: { family: 'Inter', size: 10 }, callback: function(value) { let label = this.getLabelForValue(value); return label.length > 15 ? label.substr(0, 15) + '...' : label; } }, grid: { display: false } }, y: { ticks: { font: { family: 'Inter', size: 10 }, callback: function(value) { if (value >= 1000000000) return 'Rp ' + (value / 1000000000).toFixed(1) + ' M'; if (value >= 1000000) return 'Rp ' + (value / 1000000).toFixed(0) + ' Jt'; return value; } }, beginAtZero: true, border: { display: false } } } }
+            });
+        } catch(e) { console.error("Chart Render Error:", e); }
     }
 
     function loadData() {
       const tbody = document.getElementById('tableBody'); if(!tbody) return;
       
-      // FILTERING GANDA DI FRONTEND (Mencegah kebocoran data jika backend salah respon)
       const isAdmin = checkIsAdmin();
-      const isKabid = (currentLevel === 'Level Bidang' || currentLevel === 'Kepala Bidang');
+      const isKabid = (currentLevel === 'Level Bidang');
 
-      let filtered = allData;
-      if (!isAdmin) {
-          if (isKabid) {
-              filtered = allData.filter(d => d.Bidang === currentBidang);
-          } else {
-              filtered = allData.filter(d => d.Bidang === currentBidang && d.Pembuat === currentUser);
-          }
-      }
+      // Hapus filter ganda untuk menghindari gagal render jika format string berbeda
+      let filtered = allData; 
 
-      // Dashboards
       document.getElementById('dashTotalUsulan').innerText = filtered.length;
       document.getElementById('dashTotalAnggaran').innerText = formatRp(filtered.reduce((s, i) => s + safeNum(i.Total_Anggaran), 0));
       document.getElementById('dashDisetujui').innerText = filtered.filter(x => x.Status === 'DISETUJUI').length;
-      document.getElementById('dashProses').innerText = filtered.filter(x => x.Status === 'VERIFIKASI' || x.Status === 'KOREKSI').length;
+      document.getElementById('dashProses').innerText = filtered.filter(x => String(x.Status).includes('DIAJUKAN') || String(x.Status).includes('KOREKSI')).length;
 
-      // PANGGIL FUNGSI RENDER CHART DENGAN DATA YANG SUDAH DIFILTER TAPI CEGAH CRASH
       try {
           renderCharts(filtered);
       } catch (e) {
@@ -1705,53 +1669,81 @@
       if(filtered.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="p-10 text-center italic text-gray-400">Belum ada usulan pada unit kerja ini.</td></tr>'; return; }
       
       tbody.innerHTML = filtered.map(g => {
-        let bc = 'status-draft';
-        if(g.Status === 'KOREKSI') bc = 'status-koreksi';
-        if(g.Status === 'VERIFIKASI') bc = 'status-verifikasi';
-        if(g.Status === 'DISETUJUI') bc = 'status-disetujui';
+        let statLabel = String(g.Status || 'DRAFT');
         
-        const isEditable = !isAdmin && (g.Status === 'DRAFT' || g.Status === 'KOREKSI');
+        let statColor = 'bg-gray-500 text-white'; // DRAFT
+        if(statLabel === 'KOREKSI PROGRAM') statColor = 'status-koreksiprog';
+        if(statLabel === 'DIAJUKAN KE BIDANG') statColor = 'status-kebidang';
+        if(statLabel === 'KOREKSI BIDANG') statColor = 'status-koreksibid';
+        if(statLabel === 'DIAJUKAN KE ADMIN') statColor = 'status-keadmin';
+        if(statLabel === 'DISETUJUI') statColor = 'status-disetujui';
         
+        let isEditable = false;
+        if (!isAdmin && !isKabid && (statLabel === 'DRAFT' || statLabel === 'KOREKSI PROGRAM')) isEditable = true;
+        if (isKabid && (statLabel === 'DIAJUKAN KE BIDANG' || statLabel === 'KOREKSI BIDANG')) isEditable = true;
+        
+        let showReviewBtn = false;
+        if (isKabid && (statLabel === 'DIAJUKAN KE BIDANG' || statLabel === 'KOREKSI BIDANG')) showReviewBtn = true;
+        if (isAdmin && statLabel === 'DIAJUKAN KE ADMIN') showReviewBtn = true;
+
         return `
         <tr class="hover:bg-blue-50/50 border-b">
-          <td class="px-6 py-4"><span class="px-2 py-1 rounded-full text-[10px] font-bold ${bc}">${g.Status || 'DRAFT'}</span></td>
-          <td class="px-6 py-4 text-xs font-medium text-gray-500">${g.Bidang}</td>
+          <td class="px-6 py-4"><span class="px-2 py-1 rounded-full text-[9px] font-bold ${statColor} whitespace-nowrap">${statLabel}</span></td>
+          <td class="px-6 py-4 text-xs font-medium text-gray-500">${g.Bidang || '-'}</td>
           <td class="px-6 py-4 text-xs font-bold text-gray-600">${g.Pembuat || '-'}</td>
-          <td class="px-6 py-4"><button onclick="openRincianView('${g.ID_Usulan}')" class="text-left font-bold text-slate-700 hover:text-blue-600 w-full whitespace-normal block">${g.Sub_Kegiatan}</button></td>
+          <td class="px-6 py-4"><button onclick="openRincianView('${g.ID_Usulan}')" class="text-left font-bold text-slate-700 hover:text-blue-600 w-full whitespace-normal block">${g.Sub_Kegiatan || '-'}</button></td>
           <td class="px-6 py-4 text-right font-black text-blue-900">${formatRp(g.Total_Anggaran)}</td>
           <td class="px-6 py-4 text-center whitespace-nowrap">
             ${isEditable ? `
-              <button onclick="openRincianView('${g.ID_Usulan}')" class="text-blue-500 mr-3" title="Edit"><i class="fas fa-edit fa-lg"></i></button><button onclick="openDeleteModal('${g.ID_Usulan}')" class="text-red-500 mr-3" title="Hapus"><i class="fas fa-trash fa-lg"></i></button>
+              <button onclick="openRincianView('${g.ID_Usulan}')" class="text-blue-500 mr-3" title="Edit Rincian"><i class="fas fa-edit fa-lg"></i></button>
+              <button onclick="openDeleteModal('${g.ID_Usulan}')" class="text-red-500 mr-3" title="Hapus Usulan"><i class="fas fa-trash fa-lg"></i></button>
             ` : `
               <button onclick="openRincianView('${g.ID_Usulan}')" class="text-indigo-500 mr-3" title="Lihat Daftar Rincian"><i class="fas fa-list fa-lg"></i></button>
             `}
-            ${(isAdmin && g.Status === 'VERIFIKASI') ? `<button onclick="openVerifikasi('${g.ID_Usulan}')" class="text-green-600 mr-3" title="Review Verifikasi"><i class="fas fa-check-double fa-lg"></i></button>` : ''}
+            ${showReviewBtn ? `<button onclick="openVerifikasi('${g.ID_Usulan}')" class="text-green-600 mr-3" title="Review / Verifikasi"><i class="fas fa-check-double fa-lg"></i></button>` : ''}
           </td>
         </tr>`;
       }).join('');
     }
 
-    // FUNGSI KIRIM & HAPUS USULAN
-    function kirimUsulan() {
-        const isAdmin = checkIsAdmin();
-        const isKabid = (currentLevel === 'Level Bidang' || currentLevel === 'Kepala Bidang');
+    function refreshAllData() {
+        const loader = document.getElementById('globalLoader');
+        if(loader) loader.classList.remove('hidden');
+        
+        if (typeof google !== 'undefined' && google.script) {
+            let reqLevel = currentLevel;
+            if (currentBidang === 'Admin Verifikator') reqLevel = 'Admin Verifikator';
+
+            google.script.run.withSuccessHandler(resU => {
+                if(resU && resU.status === 'success') {
+                    allData = (resU.data ? resU.data : []);
+                }
+                
+                google.script.run.withSuccessHandler(resR => {
+                    if(resR && resR.status === 'success') {
+                        allRincian = (resR.data ? resR.data : []);
+                    }
+                    if(loader) loader.classList.add('hidden');
+                    loadData(); 
+                }).getRincianData();
+            }).getUsulanData(currentBidang, currentUser, reqLevel); 
+        }
+    }
+
+    // FUNGSI PENGIRIMAN USULAN OLEH LEVEL PROGRAM
+    function kirimUsulanKeBidang() {
+        const isAdmin = checkIsAdmin(); const isKabid = (currentLevel === 'Level Bidang');
         
         if (!isScheduleActive && !isAdmin) { return showModalNotif("Akses Terkunci", "Maaf, jadwal pengajuan telah dikunci."); }
         
-        // Cek draft yang dia miliki / bisa dia kirim
-        let drafts = allData.filter(d => (d.Status === 'DRAFT' || d.Status === 'KOREKSI'));
-        
-        // FILTERING GANDA (Mencegah pengiriman data orang lain)
-        if (!isAdmin) {
-            if (isKabid) {
-                drafts = drafts.filter(d => d.Bidang === currentBidang);
-            } else {
-                drafts = drafts.filter(d => d.Bidang === currentBidang && d.Pembuat === currentUser);
-            }
-        }
+        // Cek usulan yang ada di tabel user aktif saat ini yang berstatus DRAFT / KOREKSI
+        let drafts = allData.filter(d => (d.Status === 'DRAFT' || d.Status === 'KOREKSI PROGRAM'));
+        if (drafts.length === 0) { return showToast("Tidak ada usulan yang siap dikirim.", "error"); }
 
-        if (drafts.length === 0) { return showToast("Tidak ada usulan DRAFT / KOREKSI.", "error"); }
-        document.getElementById('kirimModalText').innerText = `Kirim ${drafts.length} usulan untuk diverifikasi Admin?`;
+        let belumUpload = drafts.filter(d => !d.Link_KAK || d.Link_KAK.trim() === "");
+        if (belumUpload.length > 0) { return showModalNotif("Akses Ditolak", `Terdapat ${belumUpload.length} usulan yang belum memiliki file TOR/KAK. Silakan upload terlebih dahulu di menu "Upload Dokumen".`); }
+
+        document.getElementById('kirimModalText').innerText = `Kirim ${drafts.length} usulan ke Kepala Bidang untuk diverifikasi?`;
         document.getElementById('kirimModal').classList.remove('hidden');
     }
 
@@ -1759,28 +1751,13 @@
 
     function confirmKirimUsulan() {
         closeKirimModal(); showToast("Mengirim...");
-        
-        const isAdmin = checkIsAdmin();
-        const isKabid = (currentLevel === 'Level Bidang' || currentLevel === 'Kepala Bidang');
-        
-        let drafts = allData.filter(d => (d.Status === 'DRAFT' || d.Status === 'KOREKSI'));
-        if (!isAdmin) {
-            if (isKabid) {
-                drafts = drafts.filter(d => d.Bidang === currentBidang);
-            } else {
-                drafts = drafts.filter(d => d.Bidang === currentBidang && d.Pembuat === currentUser);
-            }
-        }
-        
+        let drafts = allData.filter(d => (d.Status === 'DRAFT' || d.Status === 'KOREKSI PROGRAM'));
         let processed = 0;
         drafts.forEach(d => {
             google.script.run.withSuccessHandler(() => {
                 processed++;
-                if (processed === drafts.length) {
-                    showToast("Usulan berhasil dikirim ke Admin!");
-                    refreshAllData(); // Reload UI otomatis
-                }
-            }).updateStatusUsulan(d.ID_Usulan, 'VERIFIKASI');
+                if (processed === drafts.length) { showToast("Usulan berhasil dikirim ke Kepala Bidang!"); refreshAllData(); }
+            }).updateStatusUsulan(d.ID_Usulan, 'DIAJUKAN KE BIDANG');
         });
     }
 
@@ -1789,9 +1766,7 @@
     
     function confirmDeleteProposal() {
         if (!proposalToDeleteId) return; 
-        const id = proposalToDeleteId; 
-        closeDeleteModal(); 
-        showToast("Menghapus...");
+        const id = proposalToDeleteId; closeDeleteModal(); showToast("Menghapus...");
         if (typeof google !== 'undefined' && google.script) {
             google.script.run
                 .withSuccessHandler(function(res) { 
@@ -1803,7 +1778,7 @@
         }
     }
 
-    // VERIFIKASI ADMIN
+    // VERIFIKASI (ADMIN & BIDANG)
     function openVerifikasi(id) {
         const h = allData.find(d => d.ID_Usulan === id); if(!h) return;
         currentVerifikasiId = id;
@@ -1811,12 +1786,24 @@
         document.getElementById('verifTarget').innerText = h.Target; document.getElementById('verifId').innerText = h.ID_Usulan;
         verifikasiItems = allRincian.filter(r => r.ID_Usulan === id).map(it => Object.assign({}, it, { Status_Item: it.Status_Item || 'BELUM', Catatan: it.Catatan || '' }));
         document.getElementById('verifTotalAnggaran').innerText = formatRp(h.Total_Anggaran);
+        
+        const linkKAK = document.getElementById('verifLinkKAK');
+        if (linkKAK) {
+            if(h.Link_KAK) { linkKAK.href = h.Link_KAK; linkKAK.innerText = "Buka File KAK"; linkKAK.className = "text-blue-600 hover:underline font-bold"; }
+            else { linkKAK.removeAttribute('href'); linkKAK.innerText = "Tidak Ada File"; linkKAK.className = "text-gray-400 italic pointer-events-none"; }
+        }
+        
+        const linkDuk = document.getElementById('verifLinkDukung');
+        if (linkDuk) {
+            if(h.Link_DataDukung) { linkDuk.href = h.Link_DataDukung; linkDuk.innerText = "Buka Data Dukung"; linkDuk.className = "text-blue-600 hover:underline font-bold"; }
+            else { linkDuk.removeAttribute('href'); linkDuk.innerText = "Tidak Ada File"; linkDuk.className = "text-gray-400 italic pointer-events-none"; }
+        }
+
         renderVerifikasiTable(); switchView('verifikasiView');
     }
     function renderVerifikasiTable() {
         document.getElementById('verifTableBody').innerHTML = verifikasiItems.map((it, idx) => {
-            // Cari Nama Rekening berdasarkan Kode Rekening
-            const rek = allRekening.find(r => String(r.Kode_Rekening).trim() === String(it.Kode_Rekening).trim());
+            const rek = globalRekening.find(r => String(r.Kode_Rekening).trim() === String(it.Kode_Rekening).trim());
             const namaRekening = rek ? rek.Nama_Rekening : "Rekening Tidak Ditemukan";
             
             return `
@@ -1835,7 +1822,7 @@
                     <button onclick="setItemStatus(${idx}, 'KOREKSI')" class="border border-red-500 text-red-600 px-2 py-1 rounded text-[10px] hover:bg-red-50"><i class="fas fa-times"></i></button>
                     <div class="text-[10px] font-bold mt-2">${it.Status_Item === 'DISETUJUI' ? '<span class="text-green-600">DISETUJUI</span>' : (it.Status_Item === 'KOREKSI' ? '<span class="text-red-600">KOREKSI</span>' : '<span class="text-gray-400">BELUM REVIEW</span>')}</div>
                 </td>
-                <td class="p-4"><textarea onchange="verifikasiItems[${idx}].Catatan=this.value" class="w-full text-xs border border-gray-300 p-2 rounded focus:border-blue-500 focus:outline-none" placeholder="Catatan Admin...">${it.Catatan}</textarea></td>
+                <td class="p-4"><textarea onchange="verifikasiItems[${idx}].Catatan=this.value" class="w-full text-xs border border-gray-300 p-2 rounded focus:border-blue-500 focus:outline-none" placeholder="Catatan...">${it.Catatan}</textarea></td>
             </tr>`
         }).join('');
         
@@ -1855,42 +1842,155 @@
         document.getElementById('checkAllVerif').checked = false; renderVerifikasiTable();
     }
     
-    function simpanHasilVerifikasi() {
+    // PEMROSESAN VERIFIKASI (BERJENJANG)
+    function simpanHasilVerifikasi(isSetuju) {
+        const isAdmin = checkIsAdmin();
+        const isKabid = (currentLevel === 'Level Bidang');
+
         if(verifikasiItems.some(i => i.Status_Item === 'BELUM')) return showToast("Ada rincian yang BELUM direview!", "error");
-        const status = verifikasiItems.some(i => i.Status_Item === 'KOREKSI') ? 'KOREKSI' : 'DISETUJUI';
-        if(!confirm(status === 'KOREKSI' ? "Kembalikan ke Unit Kerja untuk dikoreksi?" : "Setujui usulan ini?")) return;
         
-        showToast("Menyimpan hasil verifikasi...");
-        
-        // 1. Update status di header usulan
-        google.script.run.withSuccessHandler(res => {
-            // 2. Simpan status dan catatan masing-masing rincian
-            let rincianSaved = 0;
-            verifikasiItems.forEach(item => {
-                google.script.run.withSuccessHandler(() => {
-                    rincianSaved++;
-                    if(rincianSaved === verifikasiItems.length) {
-                        showToast("Hasil verifikasi berhasil disimpan!");
-                        refreshAllData();
-                        switchView('listView');
-                    }
-                }).saveRincian(item); 
-            });
-        }).updateStatusUsulan(currentVerifikasiId, status);
+        if(isSetuju && verifikasiItems.some(i => i.Status_Item === 'KOREKSI')) {
+            return showToast("Tidak bisa disetujui karena ada item yang berstatus KOREKSI.", "error");
+        }
+
+        if (!isSetuju) {
+            let statusPenolakan = isAdmin ? 'KOREKSI BIDANG' : 'KOREKSI PROGRAM';
+            if(!confirm(`Kembalikan usulan ini untuk direvisi? Status akan menjadi ${statusPenolakan}`)) return;
+            
+            showToast("Menyimpan hasil koreksi...");
+            google.script.run.withSuccessHandler(res => {
+                let rincianSaved = 0;
+                verifikasiItems.forEach(item => {
+                    google.script.run.withSuccessHandler(() => {
+                        rincianSaved++;
+                        if(rincianSaved === verifikasiItems.length) { showToast("Hasil koreksi berhasil dikirim!"); refreshAllData(); switchView('listView'); }
+                    }).saveRincian(item); 
+                });
+            }).updateStatusUsulan(currentVerifikasiId, statusPenolakan);
+
+        } else {
+            if (isAdmin) {
+                if(!confirm("Setujui usulan ini secara FINAL? Data akan masuk ke RAB.")) return;
+                showToast("Menyimpan persetujuan final...");
+                
+                google.script.run.withSuccessHandler(res => {
+                    let rincianSaved = 0;
+                    verifikasiItems.forEach(item => {
+                        google.script.run.withSuccessHandler(() => {
+                            rincianSaved++;
+                            if(rincianSaved === verifikasiItems.length) { showToast("Usulan FINAL dan Disetujui!"); refreshAllData(); switchView('listView'); }
+                        }).saveRincian(item); 
+                    });
+                }).updateStatusUsulan(currentVerifikasiId, 'DISETUJUI');
+
+            } else if (isKabid) {
+                document.getElementById('inputNamaKabid').value = currentNama; 
+                document.getElementById('inputNipKabid').value = "";
+                document.getElementById('inputFileTTD').value = "";
+                document.getElementById('cropperContainer').classList.add('hidden'); // Sembunyikan cropper saat awal buka
+                if(cropper) { cropper.destroy(); cropper = null; }
+                document.getElementById('modalApproveBidang').classList.remove('hidden');
+            }
+        }
     }
 
-    // PRINT / EXCEL RAB
+    // =====================================
+    // FUNGSI AUTO CROP TANDA TANGAN KABID
+    // =====================================
+    function initCropper(input) {
+        const file = input.files[0];
+        if (!file) return;
+        
+        if (file.size > 2 * 1024 * 1024) {
+            showToast("Ukuran gambar maksimal 2MB!", "error");
+            input.value = "";
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = document.getElementById('imageToCrop');
+            img.src = e.target.result;
+            
+            document.getElementById('cropperContainer').classList.remove('hidden');
+            
+            // Hapus instance cropper lama jika ada
+            if (cropper) { cropper.destroy(); }
+            
+            // Inisialisasi Cropper.js
+            cropper = new Cropper(img, {
+                aspectRatio: NaN, // Bebas memotong sesuai bentuk TTD
+                viewMode: 1,
+                autoCropArea: 0.9,
+                background: false,
+                zoomable: false,
+            });
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function closeModalApproveBidang() { 
+        document.getElementById('modalApproveBidang').classList.add('hidden'); 
+        if(cropper) { cropper.destroy(); cropper = null; }
+        document.getElementById('cropperContainer').classList.add('hidden');
+        document.getElementById('inputFileTTD').value = '';
+    }
+
+    async function confirmApproveBidang() {
+        const namaKabid = document.getElementById('inputNamaKabid').value.trim();
+        const nipKabid = document.getElementById('inputNipKabid').value.trim();
+        const fileInput = document.getElementById('inputFileTTD');
+
+        if(!namaKabid || !nipKabid || !fileInput.files[0]) return showToast("Nama, NIP, dan File TTD Wajib Diisi!", "error");
+        if(!cropper) return showToast("Silakan potong (crop) gambar TTD terlebih dahulu!", "error");
+
+        const btn = document.getElementById('btnSubmitTTD');
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Mengunggah...';
+
+        try {
+            // Mengambil hasil gambar yang SUDAH DI CROP
+            const canvas = cropper.getCroppedCanvas({
+                maxWidth: 600, // Membatasi ukuran maksimal agar tidak berat
+                maxHeight: 600,
+                fillColor: '#fff' // Background putih transparan
+            });
+            const base64TTD = canvas.toDataURL('image/png');
+            const fileNameTTD = `TTD_${currentBidang.replace(/[^a-zA-Z0-9]/g,'')}_${new Date().getTime()}.png`;
+            
+            const resTTD = await runGasAsync('uploadFileToDrive', base64TTD, fileNameTTD);
+            
+            if(resTTD.status !== 'success') throw new Error("Gagal mengunggah TTD: " + resTTD.message);
+
+            const linkTTD = resTTD.url;
+            const resApprove = await runGasAsync('approveUsulanOlehBidang', currentVerifikasiId, namaKabid, nipKabid, linkTTD);
+            if(resApprove.status !== 'success') throw new Error(resApprove.message);
+
+            for (let i = 0; i < verifikasiItems.length; i++) {
+                await runGasAsync('saveRincian', verifikasiItems[i]);
+            }
+
+            showToast("Usulan disetujui & berhasil diteruskan ke Admin Perencanaan!");
+            closeModalApproveBidang(); refreshAllData(); switchView('listView');
+        } catch (err) { showToast(err.message, "error"); } finally {
+            btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Setujui & Teruskan';
+        }
+    }
+
+    // =====================================
+    // EXPORT DAN CETAK RAB
+    // =====================================
     function generateRab() {
        const body = document.getElementById('rabBody'); if(!body) return;
        const isAdmin = checkIsAdmin();
        const isKabid = (currentLevel === 'Level Bidang' || currentLevel === 'Kepala Bidang');
        
-       const adminControl = document.getElementById('rabAdminControl'); const bidangControl = document.getElementById('rabBidangControl');
+       const adminControl = document.getElementById('rabAdminControl'); 
+       const bidangControl = document.getElementById('rabBidangControl');
 
        if (isAdmin) {
            if(adminControl) adminControl.classList.remove('hidden'); if(bidangControl) bidangControl.classList.add('hidden');
            const selectBidang = document.getElementById('selectRabBidang');
-           if (selectBidang && selectBidang.options.length <= 1) { bidangList.forEach(b => { const opt = document.createElement('option'); opt.value = b; opt.text = b; selectBidang.appendChild(opt); }); }
+           if (selectBidang && selectBidang.options.length <= 1) { bidangList.forEach(b => { selectBidang.add(new Option(b, b)); }); }
        } else {
            if(adminControl) adminControl.classList.add('hidden'); if(bidangControl) bidangControl.classList.remove('hidden');
        }
@@ -1898,33 +1998,69 @@
        const selBidangEl = document.getElementById('selectRabBidang');
        const selectedBidang = isAdmin ? (selBidangEl ? selBidangEl.value : 'ALL') : currentBidang;
        
+       // HANYA AMBIL DATA YANG STATUSNYA "DISETUJUI" SAJA
        const validHeaders = allData.filter(d => {
+         const isFinal = d.Status === 'DISETUJUI';
+         if (!isFinal) return false;
+
          if (isAdmin) {
-             const isNotDraft = d.Status && d.Status !== 'DRAFT'; 
              const isNotAdmin = d.Bidang !== 'Admin Verifikator';
-             if (selectedBidang === 'ALL') return isNotDraft && isNotAdmin; 
-             return isNotDraft && d.Bidang === selectedBidang;
+             if (selectedBidang === 'ALL') return isNotAdmin; 
+             return d.Bidang === selectedBidang;
          }
-         
-         // Kalau bukan admin, yang dicetak RAB adalah semua yang bukan DRAFT (yang sudah fix dikirim/disetujui)
-         const isNotDraft = d.Status && d.Status !== 'DRAFT';
-         if (isKabid) {
-             return isNotDraft && d.Bidang === currentBidang;
-         } else {
-             return isNotDraft && d.Bidang === currentBidang && d.Pembuat === currentUser;
-         }
+         return d.Bidang === currentBidang; 
        });
+
+       const btnExportBidang = document.getElementById('btnExportBidang');
+       const btnPrintBidang = document.getElementById('btnPrintBidang');
+       const warningBanner = document.getElementById('rabWarningBanner');
        
-       const validIds = validHeaders.map(h => h.ID_Usulan);
-       const filteredRincian = allRincian.filter(r => validIds.includes(r.ID_Usulan));
+       let canPrint = true;
+       if (!isAdmin) {
+           const activeUnapproved = allData.some(d => d.Bidang === currentBidang && d.Status !== 'DISETUJUI');
+           if (activeUnapproved || validHeaders.length === 0) canPrint = false;
+       }
+
+       if (btnExportBidang) btnExportBidang.disabled = !canPrint;
+       if (btnPrintBidang) btnPrintBidang.disabled = !canPrint;
+
+       if (!canPrint && !isAdmin) {
+           if(btnExportBidang) btnExportBidang.classList.add('opacity-50', 'cursor-not-allowed');
+           if(btnPrintBidang) btnPrintBidang.classList.add('opacity-50', 'cursor-not-allowed');
+           if(warningBanner) warningBanner.classList.remove('hidden');
+       } else {
+           if(btnExportBidang) btnExportBidang.classList.remove('opacity-50', 'cursor-not-allowed');
+           if(btnPrintBidang) btnPrintBidang.classList.remove('opacity-50', 'cursor-not-allowed');
+           if(warningBanner) warningBanner.classList.add('hidden');
+       }
+       
        const unitKerjaText = isAdmin ? (selectedBidang === 'ALL' ? 'SEMUA UNIT KERJA' : selectedBidang.toUpperCase()) : (currentBidang || "").toUpperCase();
        
        document.getElementById('rabSumberDanaTitle').innerText = `TAHAPAN ${sistemTahapan.toUpperCase()} T.A. ${sistemTahunAnggaran}`;
-       document.getElementById('rabUnitKerjaDisplay').innerText = `UNIT KERJA ${unitKerjaText}`; document.getElementById('rabSignText').innerText = `UNIT KERJA ${unitKerjaText}`;
+       document.getElementById('rabUnitKerjaDisplay').innerText = `UNIT KERJA ${unitKerjaText}`; 
+       document.getElementById('rabTtdBidang').innerText = unitKerjaText;
        
-       if (filteredRincian.length === 0) { 
-           body.innerHTML = '<tr><td colspan="16" class="p-10 text-center italic text-gray-500">Belum ada data usulan.</td></tr>'; document.getElementById('rabGrandTotal').innerText = formatRp(0); return; 
+       if (validHeaders.length === 0) { 
+           body.innerHTML = '<tr><td colspan="16" class="p-10 text-center italic text-gray-500">Belum ada data usulan yang DISETUJUI.</td></tr>'; 
+           document.getElementById('rabGrandTotal').innerText = formatRp(0); 
+           document.getElementById('rabTtdNama').innerText = "NAMA PEJABAT TERKAIT";
+           document.getElementById('rabTtdNip').innerText = "........................................";
+           document.getElementById('rabTtdImageContainer').innerHTML = "<br><br><br>";
+           return; 
        }
+
+       // Mengambil Data TTD dari Salah Satu Header yang Disetujui
+       const headerWithTtd = validHeaders.find(h => h.Link_TTD && h.Link_TTD.trim() !== "");
+       if (headerWithTtd) {
+           document.getElementById('rabTtdNama').innerText = headerWithTtd.Nama_Kabid || "NAMA PEJABAT TERKAIT";
+           document.getElementById('rabTtdNip').innerText = headerWithTtd.NIP_Kabid || "........................................";
+           
+           // URL GAMBAR DIPAKAI SECARA LANGSUNG (Karena Backend sudah memperbaikinya menjadi uc?export=view)
+           document.getElementById('rabTtdImageContainer').innerHTML = `<img src="${headerWithTtd.Link_TTD}" alt="TTD" style="height: 60px; object-fit: contain; margin: 0 auto;">`;
+       }
+
+       const validIds = validHeaders.map(h => h.ID_Usulan);
+       const filteredRincian = allRincian.filter(r => validIds.includes(r.ID_Usulan));
 
        const groupedData = {}; validHeaders.forEach(h => { groupedData[h.ID_Usulan] = { header: h, items: [], total: 0 }; });
        let grandTotal = 0; filteredRincian.forEach(r => { 
@@ -1940,20 +2076,19 @@
        let html = ""; let urutPrior = 1;
        for (let id in groupedData) {
            let group = groupedData[id]; let items = group.items; if(items.length === 0) continue; 
-           let targetParts = group.header.Target ? group.header.Target.trim().split(" ") : [""]; let targetNum = targetParts[0] || ""; let targetSat = targetParts.length > 1 ? targetParts.slice(1).join(" ") : "";
+           let targetParts = String(group.header.Target || "").trim().split(" "); let targetNum = targetParts[0] || ""; let targetSat = targetParts.length > 1 ? targetParts.slice(1).join(" ") : "";
 
            items.forEach((item, index) => {
                html += `<tr class="border-b border-black">`;
                if (index === 0) { html += `<td class="text-center align-top" rowspan="${items.length}">${urutPrior++}</td><td class="align-top" rowspan="${items.length}">${item.Keterangan || group.header.Sub_Kegiatan}</td>`; }
 
-               // Cari Nama Rekening
-               let rekMaster = allRekening.find(r => String(r.Kode_Rekening).trim() === String(item.Kode_Rekening).trim()); 
+               let rekMaster = globalRekening.find(r => String(r.Kode_Rekening).trim() === String(item.Kode_Rekening).trim()); 
                let rekName = rekMaster ? rekMaster.Nama_Rekening : "Rekening Tidak Ditemukan"; 
                let rekDisplay = `<b>${item.Kode_Rekening}</b><br>${rekName}`;
 
                html += `<td class="align-top text-left">${rekDisplay}</td><td class="align-top">${item.Komponen}</td><td class="align-top">${item.Spesifikasi}</td>`;
                
-               let extractedUnits = item.Koefisien.split('x').map(p => p.replace(/[0-9.]/g, '').trim()).filter(p => p !== '').join(' / ');
+               let extractedUnits = String(item.Koefisien || "").split('x').map(p => p.replace(/[0-9.]/g, '').trim()).filter(p => p !== '').join(' / ');
                
                const hrg = safeNum(item.Harga_Satuan);
                const st = safeNum(item.Sub_Total);
@@ -1977,17 +2112,24 @@
 
     function exportToExcel() {
       const table = document.getElementById('exportRabTable'); if (!table) return;
-      let sumberDanaRaw = document.getElementById('rabSumberDanaTitle').innerText; let unitKerjaRaw = document.getElementById('rabUnitKerjaDisplay').innerText; let unitKerja = unitKerjaRaw.replace('UNIT KERJA ', '').replace(/[^a-zA-Z0-9 ]/g, "").trim(); let filename = `RAB_${unitKerja}.xls`.replace(/ /g, "_");
+      let sumberDanaRaw = document.getElementById('rabSumberDanaTitle').innerText; 
+      let unitKerjaRaw = document.getElementById('rabUnitKerjaDisplay').innerText; 
+      let unitKerja = unitKerjaRaw.replace('UNIT KERJA ', '').replace(/[^a-zA-Z0-9 ]/g, "").trim(); 
+      let filename = `RAB_${unitKerja}_DISETUJUI.xls`.replace(/ /g, "_");
+      
+      let ttdNama = document.getElementById('rabTtdNama').innerText;
+      let ttdNip = document.getElementById('rabTtdNip').innerText;
+
       let html = table.cloneNode(true).outerHTML;
       let excelFile = `
         <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><style>table { border-collapse: collapse; width: 100%; font-family: 'Arial', sans-serif; font-size: 11px; }th, td { border: 1px solid #000000; padding: 4px; vertical-align: top; }th { text-align: center; vertical-align: middle; }.rab-header-green th { background-color: #92D050; font-weight: bold; color: #000; }.rab-total-blue td { background-color: #00B0F0; font-weight: bold; color: #000; }.text-center { text-align: center; }.text-right { text-align: right; }.text-left { text-align: left; }.font-bold { font-weight: bold; }.align-top { vertical-align: top; }</style></head>
-        <body><div style="text-align: center; font-weight: bold; font-size: 14px; margin-bottom: 20px;"><div>RENCANA ANGGARAN BIAYA (RAB)</div><div>${sumberDanaRaw}</div><div>${unitKerjaRaw}</div></div>${html}<br><br><table style="border:none; width:100%;"><tr><td style="border:none; width:75%;"></td><td style="border:none; text-align:center;">Mengetahui<br>Kepala ${unitKerjaRaw}<br><br><br><br><br><b><u>NAMA PEJABAT TERKAIT</u></b><br>NIP. ........................................</td></tr></table></body></html>
+        <body><div style="text-align: center; font-weight: bold; font-size: 14px; margin-bottom: 20px;"><div>RENCANA ANGGARAN BIAYA (RAB)</div><div>${sumberDanaRaw}</div><div>${unitKerjaRaw}</div></div>${html}<br><br><table style="border:none; width:100%;"><tr><td style="border:none; width:75%;"></td><td style="border:none; text-align:center;">Mengetahui<br>Kepala ${unitKerjaRaw}<br><br><br><br><br><b><u>${ttdNama}</u></b><br>NIP. ${ttdNip}</td></tr></table></body></html>
       `;
       let blob = new Blob([excelFile], { type: 'application/vnd.ms-excel' }); let url = URL.createObjectURL(blob); let a = document.createElement('a'); a.href = url; a.download = filename;
       document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); showToast("File Excel berhasil diunduh!");
     }
 
-    // INITIALIZATION (ANTI-CRASH)
+    // INITIALIZATION 
     function loadAllInitialData() {
       if (typeof google !== 'undefined' && google.script) {
         google.script.run
@@ -2022,6 +2164,7 @@
                     }
 
                     startCountdown(); 
+                    
                     setupDropdownsLengkap(res);
                     refreshAllData();
                   } else {
@@ -2044,20 +2187,16 @@
       }
     }
     
-    // PEMBARUAN: Logika Inisialisasi TomSelect yang Jauh Lebih Kokoh (Anti-Crash/Bocor)
     function setupDropdownsLengkap(res) {
        try {
            const sk = document.getElementById('selectSubKegiatan'); 
            if(sk) {
-               if(tsSubKegiatan) { tsSubKegiatan.destroy(); tsSubKegiatan = null; }
-               sk.innerHTML = '<option value=""></option>';
-               
-               window.subKegiatanData = (res && res.subKegiatan) ? res.subKegiatan : []; 
+               window.subKegiatanData = res.subKegiatan || [];
+               globalSubKegiatan = window.subKegiatanData; 
                
                window.subKegiatanData.forEach(i => {
                    const text = (i.Kode_SubKegiatan ? i.Kode_SubKegiatan + ' - ' : '') + (i.Nama_SubKegiatan || '');
-                   let opt = new Option(text, i.Nama_SubKegiatan || '');
-                   sk.add(opt);
+                   sk.add(new Option(text, i.Nama_SubKegiatan || ''));
                });
                
                tsSubKegiatan = new TomSelect(sk, { 
@@ -2068,7 +2207,6 @@
                            document.getElementById('inputTargetSatuan').value = '';
                            return;
                        }
-                       // Pencarian data referensi yang super aman
                        const selected = window.subKegiatanData.find(item => item.Nama_SubKegiatan === value);
                        if (selected) {
                            document.getElementById('inputIndikator').value = selected.Indikator || '-';
@@ -2083,19 +2221,16 @@
 
            const sd = document.getElementById('selectSumberDana'); 
            if(sd) {
-               if(tsSumberDana) { tsSumberDana.destroy(); tsSumberDana = null; }
-               sd.innerHTML = '<option value=""></option>';
                const dataDana = (res && res.sumberDana) ? res.sumberDana : [];
+               globalSumberDana = dataDana;
                dataDana.forEach(i => { sd.add(new Option(i, i)) });
                tsSumberDana = new TomSelect(sd, { placeholder: "Pilih Dana..." });
            }
 
            const sr = document.getElementById('selectRekening'); 
            if(sr) {
-               if(tsRekening) { tsRekening.destroy(); tsRekening = null; }
-               sr.innerHTML = '<option value=""></option>';
-               
                allRekening = (res && res.rekening) ? res.rekening : []; 
+               globalRekening = allRekening;
                
                allRekening.forEach(i => {
                    const kode = String(i.Kode_Rekening).trim();
@@ -2108,9 +2243,8 @@
            [1,2,3,4].forEach(n => {
                const el = document.getElementById('sat'+n);
                if(el) {
-                   if (tsSatuan[n-1]) { tsSatuan[n-1].destroy(); tsSatuan[n-1] = null; }
-                   el.innerHTML = '<option value="">Satuan</option>';
                    const dataSatuan = (res && res.satuan) ? res.satuan : [];
+                   globalSatuan = dataSatuan;
                    dataSatuan.forEach(i => el.add(new Option(i, i)));
                    tsSatuan[n-1] = new TomSelect(el, { create: true });
                }
@@ -2119,6 +2253,10 @@
            console.error("Error setting up dropdowns: ", e);
        }
     }
+
+    var script = document.createElement('script');
+    script.src = "https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js";
+    document.head.appendChild(script);
 
     document.addEventListener('DOMContentLoaded', () => {
         try {
@@ -2134,13 +2272,11 @@
                 document.getElementById('appContainer').classList.remove('hidden'); 
                 updateRoleUI(); 
                 switchView('listView'); 
-                startSessionMonitor(); 
             }
         } catch(e) {
             console.error("Init Error: ", e);
         }
         
-        // Memastikan fungsi ini tetap dipanggil meski ada error di atas
         loadAllInitialData();
     });
   </script>
