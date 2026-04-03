@@ -210,6 +210,16 @@ function getInitialData() {
 function getUsulanData(bidang, username, level) {
   try {
     let data = getDataFromSheet(SHEET_USULAN);
+    
+    // --- TAMBAHAN: MENGAMBIL NAMA LENGKAP DARI DATABASE USER ---
+    let users = getDataFromSheet(SHEET_USER);
+    let userMap = {};
+    users.forEach(u => {
+        if (u[COLUMN_MAP.username]) {
+            userMap[u[COLUMN_MAP.username]] = u[COLUMN_MAP.nama] || u[COLUMN_MAP.username];
+        }
+    });
+
     if (level === 'Admin Verifikator' || bidang === 'Admin Verifikator') {
         data = data.filter(item => item[COLUMN_MAP.status] === 'DIAJUKAN KE ADMIN' || item[COLUMN_MAP.status] === 'KOREKSI BIDANG' || item[COLUMN_MAP.status] === 'DISETUJUI');
     } else if (level === 'Level Bidang' || level === 'Kepala Bidang') {
@@ -224,6 +234,13 @@ function getUsulanData(bidang, username, level) {
     } else {
         data = data.filter(item => item[COLUMN_MAP.bidang] === bidang && item[COLUMN_MAP.pembuat] === username);
     }
+    
+    // --- TAMBAHAN: MENYISIPKAN NAMA LENGKAP KE DATA USULAN ---
+    data = data.map(item => {
+        item.Nama_Pembuat = userMap[item[COLUMN_MAP.pembuat]] || item[COLUMN_MAP.pembuat];
+        return item;
+    });
+
     return { status: 'success', data: data };
   } catch (err) { return { status: 'error', message: err.toString() }; }
 }
