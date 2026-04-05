@@ -22,11 +22,15 @@ const COLUMN_MAP = {
   "total_anggaran": "Total_Anggaran",
   "status": "Status",
   "pembuat": "Pembuat", 
+  "link_surat_usulan": "Link_SuratUsulan",
   "link_kak": "Link_KAK",             
   "link_datadukung": "Link_DataDukung", 
   "nama_kabid": "Nama_Kabid",
   "nip_kabid": "NIP_Kabid",  
-  "link_ttd": "Link_TTD",    
+  "link_ttd": "Link_TTD",  
+  "nama_kadis": "Nama_Kadis",
+  "nip_kadis": "NIP_Kadis",  
+  "link_ttd_kadis": "Link_TTD_Kadis",  
   "id_rincian": "ID_Rincian",
   "kode_rekening": "Kode_Rekening",
   "nama_rekening": "Nama_Rekening",
@@ -116,22 +120,24 @@ function uploadFileToDrive(base64Data, fileName) {
   }
 }
 
-function updateLampiranUsulan(idUsulan, linkKak, linkDukung) {
+function updateLampiranUsulan(idUsulan, linkSurat, linkKak, linkDukung) {
   try {
     const sheet = getDb().getSheetByName(SHEET_USULAN);
     const data = sheet.getDataRange().getDisplayValues();
     const headers = data[0].map(h => String(h).trim().replace(/\s+/g, '_'));
     
     const idIndex = headers.indexOf(COLUMN_MAP.id_usulan);
+    const suratIndex = headers.indexOf(COLUMN_MAP.link_surat_usulan);
     const kakIndex = headers.indexOf(COLUMN_MAP.link_kak);
     const dukungIndex = headers.indexOf(COLUMN_MAP.link_datadukung);
 
-    if (kakIndex === -1 || dukungIndex === -1) throw new Error("Kolom Link_KAK atau Link_DataDukung belum ada di tabel.");
+    if (suratIndex === -1 || kakIndex === -1 || dukungIndex === -1) throw new Error("Kolom Link Surat, KAK, atau DataDukung belum ada di tabel.");
 
     for (let i = 1; i < data.length; i++) {
       if (data[i][idIndex] === idUsulan) {
-        if (linkKak) sheet.getRange(i + 1, kakIndex + 1).setValue(linkKak);
-        if (linkDukung) sheet.getRange(i + 1, dukungIndex + 1).setValue(linkDukung);
+        if (linkSurat !== undefined && linkSurat !== null) sheet.getRange(i + 1, suratIndex + 1).setValue(linkSurat.trim() === "" ? "" : linkSurat);
+        if (linkKak !== undefined && linkKak !== null) sheet.getRange(i + 1, kakIndex + 1).setValue(linkKak.trim() === "" ? "" : linkKak);
+        if (linkDukung !== undefined && linkDukung !== null) sheet.getRange(i + 1, dukungIndex + 1).setValue(linkDukung.trim() === "" ? "" : linkDukung);
         return { status: 'success', message: 'Lampiran berhasil diperbarui.' };
       }
     }
@@ -500,6 +506,33 @@ function savePengaturanSistem(tahapan, deadline, tahun) {
     updateParam("Tahapan_Aktif", tahapan); updateParam("Batas_Waktu", deadline); updateParam("Tahun_Anggaran", tahun);
     return { status: 'success', message: 'Pengaturan disimpan!' };
   } catch (err) { return { status: 'error', message: err.toString() }; }
+}
+
+function approveUsulanOlehAdmin(idUsulan, namaKadis, nipKadis, linkTtdKadis) {
+    try {
+        const sheet = getDb().getSheetByName(SHEET_USULAN);
+        const data = sheet.getDataRange().getDisplayValues();
+        const headers = data[0].map(h => String(h).trim().replace(/\s+/g, '_'));
+        
+        const idIndex = headers.indexOf(COLUMN_MAP.id_usulan);
+        const statusIndex = headers.indexOf(COLUMN_MAP.status);
+        const namaIdx = headers.indexOf(COLUMN_MAP.nama_kadis);
+        const nipIdx = headers.indexOf(COLUMN_MAP.nip_kadis);
+        const ttdIdx = headers.indexOf(COLUMN_MAP.link_ttd_kadis);
+
+        if(namaIdx === -1 || nipIdx === -1 || ttdIdx === -1) throw new Error("Kolom data Kepala Dinas belum ditemukan di sheet!");
+
+        for (let i = 1; i < data.length; i++) {
+            if (data[i][idIndex] === idUsulan) {
+                sheet.getRange(i + 1, statusIndex + 1).setValue("DISETUJUI");
+                sheet.getRange(i + 1, namaIdx + 1).setValue(namaKadis);
+                sheet.getRange(i + 1, nipIdx + 1).setValue(nipKadis);
+                sheet.getRange(i + 1, ttdIdx + 1).setValue(linkTtdKadis);
+                return { status: 'success', message: 'Usulan berhasil disahkan oleh Kepala Dinas.' };
+            }
+        }
+        return { status: 'error', message: 'ID Usulan tidak ditemukan.' };
+    } catch (err) { return { status: 'error', message: err.toString() }; }
 }
 
 // ==========================================
