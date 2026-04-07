@@ -191,12 +191,12 @@
                 <i class="fas fa-plus-circle mr-3 opacity-50"></i> Buat Usulan Baru
               </button>
               <button id="btnNavUpload" onclick="switchView('uploadView')" class="nav-btn">
-                <i class="fas fa-upload mr-3 opacity-50 text-blue-600"></i> Dokumen Bidang
+                <i class="fas fa-upload mr-3 opacity-50 text-blue-600"></i> Upload Dokumen
               </button>
           </div>
           
           <button id="btnNavRab" onclick="switchView('rabView')" class="nav-btn">
-            <i class="fas fa-file-excel mr-3 opacity-50 text-green-600"></i> Dokumen RAB Final
+            <i class="fas fa-file-excel mr-3 opacity-50 text-green-600"></i> Dokumen RAB
           </button>
           
           <div id="adminMenuSection" class="pt-6 mt-4 border-t border-gray-100" style="display: none;">
@@ -211,9 +211,9 @@
 
           <!-- MENU PANDUAN APLIKASI (DYNAMIC LINK) -->
           <div class="pt-4 mt-4 border-t border-gray-100">
-            <button id="btnPanduanAplikasi" href="#" target="_blank" class="nav-btn">
+            <a id="btnPanduanAplikasi" href="#" target="_blank" class="nav-btn">
               <i class="fas fa-book mr-3 text-blue-600"></i> Panduan Aplikasi
-            </button>
+            </a>
           </div>
           
         </div>
@@ -231,7 +231,7 @@
             </div>
             <div class="flex space-x-2" id="bidangActionButtons">
               <button onclick="kirimUsulanKeBidang()" class="bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-700 transition flex items-center shadow-sm">
-                <i class="fas fa-paper-plane mr-2"></i> Kirim ke Bidang
+                <i class="fas fa-paper-plane mr-2"></i> Kirim Usulan
               </button>
               <button onclick="openHeaderModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 transition flex items-center shadow-sm">
                 <i class="fas fa-plus mr-2"></i> Usulan Baru
@@ -300,11 +300,18 @@
             <!-- Header Filter Khusus Admin -->
             <div class="p-4 border-b border-gray-100 flex flex-col md:flex-row justify-between items-center bg-gray-50 gap-4">
                <h3 class="font-bold text-gray-700"><i class="fas fa-list mr-2"></i> Rincian Data Usulan</h3>
-               <div id="adminListFilterContainer" style="display: none;" class="flex items-center space-x-2">
-                  <label class="text-xs font-bold text-gray-500 whitespace-nowrap"><i class="fas fa-filter mr-1"></i> Filter Unit Kerja:</label>
-                  <select id="filterListBidang" onchange="listBidangFilter = this.value; loadData();" class="form-input text-xs py-1.5 px-3 w-full md:w-64 rounded-lg font-semibold text-blue-800 border-gray-300">
-                      <option value="ALL">-- Tampilkan Semua --</option>
-                  </select>
+               <div class="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-4 w-full md:w-auto">
+                   <div class="flex items-center space-x-2 w-full md:w-auto">
+                      <label class="text-xs font-bold text-gray-500 whitespace-nowrap hidden md:block"><i class="fas fa-search mr-1"></i> Cari:</label>
+                      <input type="text" id="searchInputList" oninput="currentPage = 1; loadData()" class="form-input text-xs py-1.5 px-3 w-full md:w-64 rounded-lg font-medium border-gray-300 focus:border-blue-500" placeholder="Usulan, unit, pengusul, atau harga...">
+                   </div>
+                   
+                   <div id="adminListFilterContainer" style="display: none;" class="flex items-center space-x-2 w-full md:w-auto">
+                      <label class="text-xs font-bold text-gray-500 whitespace-nowrap hidden md:block"><i class="fas fa-filter mr-1"></i> Unit Kerja:</label>
+                      <select id="filterListBidang" onchange="listBidangFilter = this.value; currentPage = 1; loadData();" class="form-input text-xs py-1.5 px-3 w-full md:w-48 rounded-lg font-semibold text-blue-800 border-gray-300">
+                          <option value="ALL">-- Semua Bidang --</option>
+                      </select>
+                   </div>
                </div>
             </div>
 
@@ -325,6 +332,8 @@
                 </tbody>
               </table>
             </div>
+            <div id="paginationContainer" class="p-4 border-t border-gray-100 flex flex-col md:flex-row items-center justify-between bg-gray-50 text-xs gap-4 rounded-b-2xl">
+            </div>
           </div>
         </div>
 
@@ -333,7 +342,7 @@
           <div class="max-w-5xl mx-auto space-y-6">
             <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100">
               <h2 class="text-xl font-bold text-slate-800 mb-6 border-b pb-4">
-                <i class="fas fa-file-alt text-blue-600 mr-2"></i> Dokumen Pendukung Bidang
+                <i class="fas fa-file-alt text-blue-600 mr-2"></i> Dokumen Pendukung
               </h2>
               
               <div class="mb-8 p-5 bg-blue-50 rounded-xl border border-blue-100">
@@ -371,7 +380,7 @@
                         <input type="file" id="fileKAK_Sidebar" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip,.rar,application/zip,application/x-rar-compressed" class="form-input text-xs border border-gray-300 rounded focus:outline-none p-1.5" onchange="checkFileSize(this, 5)">
                     </div>
                     <div>
-                        <label class="label-form">3. Data Dukung / Harga</label>
+                        <label class="label-form">3. Data Dukung (Standar Harga dll)</label>
                         <p class="text-xs text-gray-400 mb-2">Opsional. Maks: 5MB</p>
                         <input type="file" id="fileDataDukung_Sidebar" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip,.rar,application/zip,application/x-rar-compressed" class="form-input text-xs border border-gray-300 rounded focus:outline-none p-1.5" onchange="checkFileSize(this, 5)">  
                     </div>
@@ -430,7 +439,14 @@
                 </div>
 
                 <!-- Table Rincian Checklist -->
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">              
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">    
+                    <div class="flex flex-col md:flex-row justify-between items-center bg-gray-50 p-4 border-b border-gray-100 gap-4">
+                       <h3 class="font-bold text-gray-700"><i class="fas fa-list-ul mr-2"></i> Rincian Evaluasi</h3>
+                       <div class="flex items-center space-x-2 w-full md:w-auto">
+                          <label class="text-xs font-bold text-gray-500 whitespace-nowrap hidden md:block"><i class="fas fa-search mr-1"></i> Cari:</label>
+                          <input type="text" id="searchInputVerifikasi" oninput="renderVerifikasiTable()" class="form-input text-xs py-1.5 px-3 w-full md:w-64 rounded-lg font-medium border-gray-300 focus:border-blue-500" placeholder="Ketik nama komponen...">
+                       </div>
+                    </div>          
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm text-left">
                             <thead class="bg-gray-50 text-gray-500 text-xs uppercase font-bold border-b">
@@ -504,6 +520,13 @@
 
             <!-- Tabel Daftar Rincian -->
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div class="flex flex-col md:flex-row justify-between items-center bg-gray-50 p-4 border-b border-gray-100 gap-4">
+                  <h3 class="font-bold text-gray-700"><i class="fas fa-list-ul mr-2"></i> Rincian Rencana Belanja</h3>
+                  <div class="flex items-center space-x-2 w-full md:w-auto">
+                    <label class="text-xs font-bold text-gray-500 whitespace-nowrap hidden md:block"><i class="fas fa-search mr-1"></i> Cari:</label>
+                    <input type="text" id="searchInputRincian" oninput="renderRincianView()" class="form-input text-xs py-1.5 px-3 w-full md:w-64 rounded-lg font-medium border-gray-300 focus:border-blue-500" placeholder="Ketik nama komponen, spesifikasi...">
+                  </div>
+              </div>
                <div class="overflow-x-auto">
                  <table class="w-full text-sm text-left">
                     <thead class="bg-gray-50 text-gray-500 text-[10px] uppercase font-bold border-b tracking-wider">
@@ -520,6 +543,8 @@
                     </tbody>
                  </table>
                </div>
+            </div>
+            <div id="paginationRincianContainer" class="p-4 border-t border-gray-100 flex flex-col md:flex-row items-center justify-between bg-white text-xs gap-4 rounded-b-xl">
             </div>
 
             <!-- Tombol Simpan Final -->
@@ -596,12 +621,15 @@
         <div id="rabView" class="min-h-screen p-4 md:p-10" style="display: none;">
           <div id="rabAdminControl" class="max-w-5xl mx-auto bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-200 mb-6 flex flex-col md:flex-row items-center justify-between gap-4 no-print" style="display: none;">
             <div class="flex flex-col md:flex-row md:items-center w-full gap-3">
-              <label class="font-bold text-sm text-gray-700 whitespace-nowrap"><i class="fas fa-filter text-blue-500 mr-2"></i>Filter RAB Unit Kerja:</label>
-              <select id="selectRabBidang" onchange="generateRab()" class="form-input w-full md:w-64 text-sm font-semibold text-blue-900"><option value="ALL">Semua Unit Kerja</option></select>
+              <label class="font-bold text-sm text-gray-700 whitespace-nowrap"><i class="fas fa-filter text-blue-500 mr-2"></i>Unit Kerja:</label>
+              <select id="selectRabBidang" onchange="generateRab()" class="form-input w-full md:w-48 text-sm font-semibold text-blue-900"><option value="ALL">Semua Unit Kerja</option></select>
+              
+              <label class="font-bold text-sm text-gray-700 whitespace-nowrap ml-0 md:ml-2"><i class="fas fa-filter text-purple-500 mr-2"></i>Sub Kegiatan:</label>
+              <select id="selectRabSubKegiatan" onchange="generateRab()" class="form-input w-full md:w-48 text-sm font-semibold text-purple-900"><option value="ALL">Semua Sub Kegiatan</option></select>
             </div>
             <div class="flex gap-2 w-full md:w-auto mt-3 md:mt-0">
-              <button id="btnExportAdmin" onclick="exportToExcel()" class="bg-green-600 text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-green-700 transition flex items-center shadow-sm justify-center"><i class="fas fa-file-excel mr-2"></i> Excel</button>
-              <button id="btnPrintAdmin" onclick="window.print()" class="bg-blue-800 text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-blue-900 transition flex items-center shadow-sm justify-center"><i class="fas fa-print mr-2"></i> Cetak</button>
+              <button id="btnExportAdmin" onclick="exportToExcel()" class="bg-green-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold hover:bg-green-700 transition flex items-center shadow-sm justify-center"><i class="fas fa-file-excel mr-2"></i> Excel</button>
+              <button id="btnPrintAdmin" onclick="window.print()" class="bg-blue-800 text-white px-4 py-2.5 rounded-lg text-sm font-bold hover:bg-blue-900 transition flex items-center shadow-sm justify-center"><i class="fas fa-print mr-2"></i> Cetak</button>
             </div>
           </div>
 
@@ -809,7 +837,7 @@
       </div>
       <div class="p-6 space-y-4 bg-white">
           <div>
-              <label class="label-form">Nama Lengkap Kepala Bidang <span class="text-red-500">*</span></label>
+              <label class="label-form">Nama Lengkap Kepala Bidang/Kepala Puskesmas <span class="text-red-500">*</span></label>
               <input type="text" id="inputNamaKabid" class="form-input font-bold" placeholder="Gelar dan Nama Lengkap...">
           </div>
           <div>
@@ -876,6 +904,20 @@
       <div class="flex justify-center space-x-4">
         <button onclick="closeDeleteModal()" class="px-6 py-3 bg-white border-2 border-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-50 w-full">Batal</button>
         <button onclick="confirmDeleteProposal()" class="px-6 py-3 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 w-full">Ya, Hapus</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="deleteDocModal" class="fixed inset-0 bg-gray-900 bg-opacity-60 z-modal items-center justify-center px-4 no-print transition-opacity" style="backdrop-filter: blur(6px); display: none;">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 text-center">
+      <div class="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-5 text-red-500 border-4 border-white shadow-sm">
+        <i class="fas fa-trash-alt fa-3x"></i>
+      </div>
+      <h3 class="text-2xl font-bold text-gray-800 mb-2">Hapus Dokumen?</h3>
+      <p class="text-gray-500 mb-8 font-medium text-sm leading-relaxed" id="deleteDocModalText">Apakah Anda yakin ingin menghapus dokumen ini dari semua usulan?</p>
+      <div class="flex justify-center space-x-4">
+        <button onclick="closeDeleteDocModal()" class="px-6 py-3 bg-white border-2 border-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-50 w-full transition">Batal</button>
+        <button onclick="confirmDeleteDoc()" id="btnConfirmDeleteDoc" class="px-6 py-3 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 w-full transition flex items-center justify-center">Ya, Hapus</button>
       </div>
     </div>
   </div>
@@ -955,7 +997,19 @@
         "Bidang Pengendalian Penduduk, Penyuluhan dan Penggerakan", 
         "Bidang Keluarga Berencana dan Keluarga Sejahtera", 
         "Bidang Pelayanan Kesehatan Masyarakat, Farmasi dan Alkes", 
-        "Bidang Pencegahan dan Pengendalian Penyakit"
+        "Bidang Pencegahan dan Pengendalian Penyakit",
+        
+        // --- TAMBAHAN 10 UPTD PUSKESMAS ---
+        "UPTD Puskesmas Banggai",
+        "UPTD Puskesmas Matanga",
+        "UPTD Puskesmas Adean",
+        "UPTD Puskesmas Banggai Timur Raya",
+        "UPTD Puskesmas Lokotoy",
+        "UPTD Puskesmas Lantibung",
+        "UPTD Puskesmas Lipulalongo",
+        "UPTD Puskesmas Dutabusara",
+        "UPTD Puskesmas Bungin",
+        "UPTD Puskesmas Tikson Raya"
     ];
     let currentBidang = ""; 
     let currentUser = "";
@@ -1392,11 +1446,11 @@
       const btnPanduan = document.getElementById('btnPanduanAplikasi');
       if (btnPanduan) {
           if (isAdmin) {
-              btnPanduan.href = "https://drive.google.com/file/d/1tch8oY2O6xfqF3aLYLdeOmYj0vBNhTLi/view";
+              btnPanduan.href = "https://drive.google.com/file/d/1tch8oY2O6xfqF3aLYLdeOmYj0vBNhTLi/view?usp=drive_link";
           } else if (isKabid) {
-              btnPanduan.href = "https://drive.google.com/file/d/1WrzwT72FS7aUfXSa37TRbjfGcrTpHsXx/view";
+              btnPanduan.href = "https://drive.google.com/file/d/1WrzwT72FS7aUfXSa37TRbjfGcrTpHsXx/view?usp=drive_link";
           } else {
-              btnPanduan.href = "https://drive.google.com/file/d/1-24FDi2DLjcuIHSYPMJc8M3dy7SOnJOf/view";
+              btnPanduan.href = "https://drive.google.com/file/d/1-24FDi2DLjcuIHSYPMJc8M3dy7SOnJOf/view?usp=drive_link"; 
           }
       }
       
@@ -1560,129 +1614,168 @@
 
         if (tempRincian.length === 0) {
             tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-400 italic font-medium">Belum ada rincian belanja. Silakan tambah rincian.</td></tr>`;
-        } else {
-            let trs = "";
-            
-            // --- LOGIKA GROUPING 2 LEVEL (SUMBER DANA+KETERANGAN -> REKENING) ---
-            const groupedRincian = {};
-            tempRincian.forEach(function(it, originalIndex) {
-                const subTotalItem = safeNum(it.Sub_Total);
-                total += subTotalItem;
+            document.getElementById('rincianViewTotal').innerText = "Rp 0";
+            return; // Hentikan fungsi di sini jika kosong
+        }
+
+        // ========================================================
+        // [BARU] LOGIKA LIVE SEARCH (PENCARIAN AMAN)
+        // ========================================================
+        // 1. Gandakan data dan amankan indeks aslinya agar tombol Edit/Hapus tidak error
+        let rincianToRender = tempRincian.map(function(it, index) {
+            return { data: it, originalIndex: index };
+        });
+
+        // 2. Baca apa yang diketik user di kotak pencarian
+        const searchInputEl = document.getElementById('searchInputRincian');
+        const searchQuery = searchInputEl ? searchInputEl.value.toLowerCase().trim() : '';
+
+        // 3. Saring data jika ada ketikan
+        if (searchQuery !== "") {
+            rincianToRender = rincianToRender.filter(function(item) {
+                const komponen = String(item.data.Komponen || '').toLowerCase();
+                const spesifikasi = String(item.data.Spesifikasi || '').toLowerCase();
+                const kodeRek = String(item.data.Kode_Rekening || '').toLowerCase();
                 
-                // Level 1: Sumber Dana + Keterangan
-                let keyKet = (it.Sumber_Dana || "Tanpa Dana") + "|||" + (it.Keterangan || "Tanpa Keterangan");
-                // Level 2: Kode Rekening
-                let keyRek = it.Kode_Rekening || "Tanpa Rekening";
-                
-                if(!groupedRincian[keyKet]) {
-                    groupedRincian[keyKet] = {
-                        sumberDana: it.Sumber_Dana || "Tanpa Dana",
-                        keterangan: it.Keterangan || "Tanpa Keterangan",
-                        rekenings: {},
-                        groupSubTotal: 0
-                    };
-                }
-                
-                if(!groupedRincian[keyKet].rekenings[keyRek]) {
-                    const rek = globalRekening.find(function(r) { return String(r.Kode_Rekening).trim() === String(keyRek).trim(); });
-                    groupedRincian[keyKet].rekenings[keyRek] = {
-                        kodeRekening: keyRek,
-                        namaRekening: rek ? rek.Nama_Rekening : "Rekening Tidak Ditemukan",
-                        items: [],
-                        rekSubTotal: 0
-                    };
-                }
-                
-                groupedRincian[keyKet].rekenings[keyRek].items.push({ data: it, index: originalIndex });
-                groupedRincian[keyKet].rekenings[keyRek].rekSubTotal += subTotalItem;
-                groupedRincian[keyKet].groupSubTotal += subTotalItem;
+                return komponen.includes(searchQuery) || 
+                       spesifikasi.includes(searchQuery) || 
+                       kodeRek.includes(searchQuery);
             });
+        }
+        // ========================================================
 
-            let globalCounter = 1;
+        if (rincianToRender.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-400 italic font-medium">Data "${searchQuery}" tidak ditemukan pada rincian ini.</td></tr>`;
+            document.getElementById('rincianViewTotal').innerText = "Rp 0";
+            return;
+        }
 
-            for (let keyKet in groupedRincian) {
-                let group = groupedRincian[keyKet];
-                
-                // 1. BARIS HEADER GRUP 1 (SUMBER DANA & KETERANGAN)
-                trs += `
-                <tr class="bg-gray-200/80 border-y border-gray-300">
-                    <td colspan="4" class="p-3 pl-4">
-                        <div class="flex flex-col">
-                            <span class="font-bold text-blue-800 text-xs">[ # ] ${group.sumberDana}</span>
-                            <span class="text-sm font-black text-gray-800 ml-4 mt-0.5">[ - ] ${group.keterangan}</span>
-                        </div>
-                    </td>
-                    <td class="p-3 text-right font-black text-gray-800 text-sm align-middle">${formatRp(group.groupSubTotal)}</td>
-                    <td class="p-3"></td>
-                </tr>`;
-
-                for (let keyRek in group.rekenings) {
-                    let rekGroup = group.rekenings[keyRek];
-                    
-                    // 2. BARIS HEADER GRUP 2 (REKENING)
-                    trs += `
-                    <tr class="bg-gray-50 border-b border-gray-200">
-                        <td class="p-2 text-center"></td>
-                        <td colspan="3" class="p-2 pl-10">
-                            <div class="text-[10px] text-gray-600 font-mono bg-white px-2 py-1.5 rounded inline-block border border-gray-200 shadow-sm">
-                                <i class="fas fa-wallet mr-1 text-blue-500"></i> <b>${rekGroup.kodeRekening}</b> - ${rekGroup.namaRekening}
-                            </div>
-                        </td>
-                        <td class="p-2 text-right font-bold text-blue-600 text-xs align-middle">${formatRp(rekGroup.rekSubTotal)}</td>
-                        <td class="p-2"></td>
-                    </tr>`;
-
-                    // 3. BARIS DETAIL ITEM
-                    rekGroup.items.forEach(function(groupItem) {
-                        let it = groupItem.data;
-                        let originalIdx = groupItem.index;
-
-                        const isKoreksi = it.Status_Item === 'KOREKSI'; const isDisetujui = it.Status_Item === 'DISETUJUI';
-                        
-                        let statusBadge = "";
-                        if (isKoreksi) statusBadge = `<span class="bg-red-100 text-red-700 text-[10px] px-2 py-0.5 rounded font-bold border border-red-200 inline-flex items-center"><i class="fas fa-exclamation-triangle mr-1"></i> Perlu Koreksi</span>`;
-                        else if (isDisetujui) statusBadge = `<span class="bg-green-100 text-green-700 text-[10px] px-2 py-0.5 rounded font-bold border border-green-200 inline-flex items-center"><i class="fas fa-check-circle mr-1"></i> Disetujui</span>`;
-
-                        let catatanBox = "";
-                        if (it.Catatan) catatanBox = `<div class="mt-2 p-2 bg-yellow-50 border border-yellow-200 text-[10px] text-gray-700 rounded-lg flex items-start shadow-sm"><i class="fas fa-comments mt-0.5 mr-2 text-yellow-600"></i> <div class="w-full"><b>Riwayat Diskusi:</b><br><div class="whitespace-pre-wrap font-mono mt-1 leading-relaxed">${it.Catatan}</div></div></div>`;
-
-                        let rowClasses = isKoreksi ? "border-b bg-red-50/40 hover:bg-red-50 transition" : "border-b hover:bg-blue-50/30 transition bg-white";
-
-                        trs += `
-                        <tr class="${rowClasses}">
-                            <td class="p-4 text-center font-bold ${isKoreksi ? 'text-red-400' : 'text-gray-400'} text-xs">${globalCounter++}</td>
-                            
-                            <!-- Kolom ini sangat menjorok ke dalam (pl-14) -->
-                            <td class="p-4 min-w-[250px] whitespace-normal pl-14 border-l-4 border-transparent hover:border-blue-400 transition-all">
-                                <div class="flex items-center gap-2 mb-1">${statusBadge}</div>
-                                <div class="text-sm font-semibold ${isKoreksi ? 'text-red-800' : 'text-gray-800'}">
-                                    ${it.Komponen} <br><span class="text-xs text-gray-500 font-normal italic">${it.Spesifikasi || ''}</span>
-                                </div>
-                                ${catatanBox}
-                            </td>
-                            
-                            <td class="p-4 text-center"><span class="font-bold text-gray-800 text-sm">${it.Volume}</span><br><span class="text-[10px] text-gray-400">${it.Koefisien}</span></td>
-                            <td class="p-4 text-right font-medium text-gray-600 text-sm">${safeNum(it.Harga_Satuan).toLocaleString('id-ID')}</td>
-                            <td class="p-4 text-right font-black text-blue-700 text-sm">${safeNum(it.Sub_Total).toLocaleString('id-ID')}</td>
-                            <td class="p-4 text-center whitespace-nowrap">
-                                <button onclick="openRincianModal('VIEW', ${originalIdx})" class="text-indigo-500 mx-1 bg-indigo-50 p-1.5 rounded hover:bg-indigo-100 transition" title="Lihat Rincian"><i class="fas fa-search"></i></button>
-                                ${isEditable ? (
-                                    isDisetujui ? `
-                                    <button disabled class="text-gray-400 mx-1 bg-gray-50 p-1.5 rounded opacity-50 cursor-not-allowed" title="Terkunci (Sudah Disetujui)"><i class="fas fa-pencil-alt"></i></button>
-                                    <button disabled class="text-gray-400 mx-1 bg-gray-50 p-1.5 rounded opacity-50 cursor-not-allowed" title="Terkunci (Sudah Disetujui)"><i class="fas fa-trash-alt"></i></button>
-                                    ` : `
-                                    <button onclick="openRincianModal('EDIT', ${originalIdx})" class="text-blue-500 mx-1 bg-blue-50 p-1.5 rounded hover:bg-blue-100 transition" title="Edit"><i class="fas fa-pencil-alt"></i></button>
-                                    <button onclick="hapusRincianTemp(${originalIdx})" class="text-red-500 mx-1 bg-red-50 p-1.5 rounded hover:bg-red-100 transition" title="Hapus"><i class="fas fa-trash-alt"></i></button>
-                                    `
-                                ) : ''}
-                            </td>
-                        </tr>`;
-                    });
-                }
+        let trs = "";
+        
+        // --- LOGIKA GROUPING 2 LEVEL (SUMBER DANA+KETERANGAN -> REKENING) ---
+        const groupedRincian = {};
+        
+        rincianToRender.forEach(function(item) {
+            const it = item.data;
+            const originalIndex = item.originalIndex; // Gunakan indeks yang sudah diamankan
+            
+            const subTotalItem = safeNum(it.Sub_Total);
+            total += subTotalItem;
+            
+            // Level 1: Sumber Dana + Keterangan
+            let keyKet = (it.Sumber_Dana || "Tanpa Dana") + "|||" + (it.Keterangan || "Tanpa Keterangan");
+            // Level 2: Kode Rekening
+            let keyRek = it.Kode_Rekening || "Tanpa Rekening";
+            
+            if(!groupedRincian[keyKet]) {
+                groupedRincian[keyKet] = {
+                    sumberDana: it.Sumber_Dana || "Tanpa Dana",
+                    keterangan: it.Keterangan || "Tanpa Keterangan",
+                    rekenings: {},
+                    groupSubTotal: 0
+                };
             }
             
-            tbody.innerHTML = trs;
+            if(!groupedRincian[keyKet].rekenings[keyRek]) {
+                const rek = globalRekening.find(function(r) { return String(r.Kode_Rekening).trim() === String(keyRek).trim(); });
+                groupedRincian[keyKet].rekenings[keyRek] = {
+                    kodeRekening: keyRek,
+                    namaRekening: rek ? rek.Nama_Rekening : "Rekening Tidak Ditemukan",
+                    items: [],
+                    rekSubTotal: 0
+                };
+            }
+            
+            groupedRincian[keyKet].rekenings[keyRek].items.push({ data: it, index: originalIndex });
+            groupedRincian[keyKet].rekenings[keyRek].rekSubTotal += subTotalItem;
+            groupedRincian[keyKet].groupSubTotal += subTotalItem;
+        });
+
+        let globalCounter = 1;
+
+        for (let keyKet in groupedRincian) {
+            let group = groupedRincian[keyKet];
+            
+            // 1. BARIS HEADER GRUP 1 (SUMBER DANA & KETERANGAN)
+            trs += `
+            <tr class="bg-gray-200/80 border-y border-gray-300">
+                <td colspan="4" class="p-3 pl-4">
+                    <div class="flex flex-col">
+                        <span class="font-bold text-blue-800 text-xs">[ # ] ${group.sumberDana}</span>
+                        <span class="text-sm font-black text-gray-800 ml-4 mt-0.5">[ - ] ${group.keterangan}</span>
+                    </div>
+                </td>
+                <td class="p-3 text-right font-black text-gray-800 text-sm align-middle">${formatRp(group.groupSubTotal)}</td>
+                <td class="p-3"></td>
+            </tr>`;
+
+            for (let keyRek in group.rekenings) {
+                let rekGroup = group.rekenings[keyRek];
+                
+                // 2. BARIS HEADER GRUP 2 (REKENING)
+                trs += `
+                <tr class="bg-gray-50 border-b border-gray-200">
+                    <td class="p-2 text-center"></td>
+                    <td colspan="3" class="p-2 pl-10">
+                        <div class="text-[10px] text-gray-600 font-mono bg-white px-2 py-1.5 rounded inline-block border border-gray-200 shadow-sm">
+                            <i class="fas fa-wallet mr-1 text-blue-500"></i> <b>${rekGroup.kodeRekening}</b> - ${rekGroup.namaRekening}
+                        </div>
+                    </td>
+                    <td class="p-2 text-right font-bold text-blue-600 text-xs align-middle">${formatRp(rekGroup.rekSubTotal)}</td>
+                    <td class="p-2"></td>
+                </tr>`;
+
+                // 3. BARIS DETAIL ITEM
+                rekGroup.items.forEach(function(groupItem) {
+                    let it = groupItem.data;
+                    let originalIdx = groupItem.index;
+
+                    const isKoreksi = it.Status_Item === 'KOREKSI'; 
+                    const isDisetujui = it.Status_Item === 'DISETUJUI';
+                    
+                    let statusBadge = "";
+                    if (isKoreksi) {
+                        statusBadge = `<span class="bg-red-100 text-red-700 text-[10px] px-2 py-0.5 rounded font-bold border border-red-200 inline-flex items-center"><i class="fas fa-exclamation-triangle mr-1"></i> Perlu Koreksi</span>`;
+                    }
+
+                    let catatanBox = "";
+                    if (it.Catatan) catatanBox = `<div class="mt-2 p-2 bg-yellow-50 border border-yellow-200 text-[10px] text-gray-700 rounded-lg flex items-start shadow-sm"><i class="fas fa-comments mt-0.5 mr-2 text-yellow-600"></i> <div class="w-full"><b>Riwayat Diskusi:</b><br><div class="whitespace-pre-wrap font-mono mt-1 leading-relaxed">${it.Catatan}</div></div></div>`;
+
+                    let rowClasses = isKoreksi ? "border-b bg-red-50/40 hover:bg-red-50 transition" : "border-b hover:bg-blue-50/30 transition bg-white";
+
+                    trs += `
+                    <tr class="${rowClasses}">
+                        <td class="p-4 text-center font-bold ${isKoreksi ? 'text-red-400' : 'text-gray-400'} text-xs">${globalCounter++}</td>
+                        
+                        <td class="p-4 min-w-[250px] whitespace-normal pl-14 border-l-4 border-transparent hover:border-blue-400 transition-all">
+                            <div class="flex items-center gap-2 mb-1">${statusBadge}</div>
+                            <div class="text-sm font-semibold ${isKoreksi ? 'text-red-800' : 'text-gray-800'}">
+                                ${it.Komponen} <br><span class="text-xs text-gray-500 font-normal italic">${it.Spesifikasi || ''}</span>
+                            </div>
+                            ${catatanBox}
+                        </td>
+                        
+                        <td class="p-4 text-center"><span class="font-bold text-gray-800 text-sm">${it.Volume}</span><br><span class="text-[10px] text-gray-400">${it.Koefisien}</span></td>
+                        <td class="p-4 text-right font-medium text-gray-600 text-sm">${safeNum(it.Harga_Satuan).toLocaleString('id-ID')}</td>
+                        <td class="p-4 text-right font-black text-blue-700 text-sm">${safeNum(it.Sub_Total).toLocaleString('id-ID')}</td>
+                        <td class="p-4 text-center whitespace-nowrap">
+                            <button onclick="openRincianModal('VIEW', ${originalIdx})" class="text-indigo-500 mx-1 bg-indigo-50 p-1.5 rounded hover:bg-indigo-100 transition" title="Lihat Rincian"><i class="fas fa-search"></i></button>
+                            ${isEditable ? (
+                                isDisetujui ? `
+                                <button disabled class="text-gray-400 mx-1 bg-gray-50 p-1.5 rounded opacity-50 cursor-not-allowed" title="Terkunci (Sudah Disetujui)"><i class="fas fa-pencil-alt"></i></button>
+                                <button disabled class="text-gray-400 mx-1 bg-gray-50 p-1.5 rounded opacity-50 cursor-not-allowed" title="Terkunci (Sudah Disetujui)"><i class="fas fa-trash-alt"></i></button>
+                                ` : `
+                                <button onclick="openRincianModal('EDIT', ${originalIdx})" class="text-blue-500 mx-1 bg-blue-50 p-1.5 rounded hover:bg-blue-100 transition" title="Edit"><i class="fas fa-pencil-alt"></i></button>
+                                <button onclick="hapusRincianTemp(${originalIdx})" class="text-red-500 mx-1 bg-red-50 p-1.5 rounded hover:bg-red-100 transition" title="Hapus"><i class="fas fa-trash-alt"></i></button>
+                                `
+                            ) : ''}
+                        </td>
+                    </tr>`;
+                });
+            }
         }
+        
+        tbody.innerHTML = trs;
         document.getElementById('rincianViewTotal').innerText = formatRp(total);
     }
 
@@ -2011,22 +2104,57 @@
         uploadSurat(); // Mulai Rantai Upload
     }
 
-    function hapusDokumenBulk(jenis) {
-        let label = jenis === 'KAK' ? 'TOR/KAK' : (jenis === 'Surat' ? 'Surat Permohonan' : 'Data Dukung');
-        if(!confirm(`Apakah Anda yakin ingin menghapus ${label} dari semua usulan Anda?`)) return;
-        
-        let drafts = allData.filter(d => (d.Status === 'DRAFT' || d.Status === 'KOREKSI PROGRAM') && d.Bidang === currentBidang && d.Pembuat === currentUser);
-        if(drafts.length === 0) return;
+    // VARIABEL PENYIMPAN JENIS DOKUMEN YANG AKAN DIHAPUS
+    let documentToDeleteJenis = null;
 
-        showToast(`Menghapus ${label}...`);
+    // 1. Fungsi membuka modal hapus
+    function hapusDokumenBulk(jenis) {
+        documentToDeleteJenis = jenis;
+        let label = jenis === 'KAK' ? 'TOR/KAK' : (jenis === 'Surat' ? 'Surat Permohonan' : 'Data Dukung');
+        document.getElementById('deleteDocModalText').innerText = "Apakah Anda yakin ingin menghapus " + label + " dari semua usulan Anda?";
+        document.getElementById('deleteDocModal').style.display = 'flex';
+    }
+
+    // 2. Fungsi menutup modal hapus
+    function closeDeleteDocModal() {
+        documentToDeleteJenis = null;
+        document.getElementById('deleteDocModal').style.display = 'none';
+    }
+
+    // 3. Fungsi eksekusi hapus setelah dikonfirmasi
+    function confirmDeleteDoc() {
+        if (!documentToDeleteJenis) return;
+        
+        let jenis = documentToDeleteJenis;
+        let label = jenis === 'KAK' ? 'TOR/KAK' : (jenis === 'Surat' ? 'Surat Permohonan' : 'Data Dukung');
+        
+        // Cek usulan yang masih berstatus DRAFT atau KOREKSI
+        let drafts = allData.filter(function(d) {
+            return (d.Status === 'DRAFT' || d.Status === 'KOREKSI PROGRAM') && d.Bidang === currentBidang && d.Pembuat === currentUser;
+        });
+
+        // JIKA TIDAK ADA DRAFT, BERIKAN PERINGATAN!
+        if (drafts.length === 0) { 
+            closeDeleteDocModal(); 
+            showToast("Tidak ada usulan berstatus DRAFT. Dokumen tidak bisa dihapus!", "error");
+            return; 
+        }
+
+        const btn = document.getElementById('btnConfirmDeleteDoc');
+        btn.disabled = true; 
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Menghapus...';
+        showToast("Menghapus " + label + "...");
+
         let processed = 0;
 
-        for(let i=0; i<drafts.length; i++) {
+        for (let i = 0; i < drafts.length; i++) {
+            // Gunakan spasi " " untuk mengirim sinyal hapus ke Google Apps Script
             let uSurat = jenis === 'Surat' ? " " : drafts[i].Link_SuratUsulan;
             let uKak = jenis === 'KAK' ? " " : drafts[i].Link_KAK; 
             let uDukung = jenis === 'Dukung' ? " " : drafts[i].Link_DataDukung;
             
-            let idx = allData.findIndex(x => x.ID_Usulan === drafts[i].ID_Usulan);
+            // Hapus data lokal secara instan
+            let idx = allData.findIndex(function(x) { return x.ID_Usulan === drafts[i].ID_Usulan; });
             if (idx > -1) {
                 if (jenis === 'Surat') allData[idx].Link_SuratUsulan = "";
                 if (jenis === 'KAK') allData[idx].Link_KAK = "";
@@ -2035,9 +2163,13 @@
 
             google.script.run.withSuccessHandler(function() {
                 processed++;
-                if(processed === drafts.length) {
-                    showToast(`${label} berhasil dihapus!`);
-                    renderUploadView(); refreshAllData();   
+                if (processed === drafts.length) {
+                    showToast(label + " berhasil dihapus!");
+                    renderUploadView(); 
+                    refreshAllData();   
+                    closeDeleteDocModal(); 
+                    btn.disabled = false; 
+                    btn.innerHTML = 'Ya, Hapus';
                 }
             }).updateLampiranUsulan(drafts[i].ID_Usulan, uSurat, uKak, uDukung);
         }
@@ -2125,27 +2257,24 @@
         } catch(e) { console.error("Chart Render Error:", e); }
     }
 
-    // FUNGSI SORTING TABEL
+    // VARIABEL PAGINATION
+    let currentPage = 1;
+    const itemsPerPage = 10;
+
+    // FUNGSI SORTING TABEL (Diperbarui dengan reset halaman)
     function sortTable(col) {
-        if (currentSortCol === col) {
-            currentSortAsc = !currentSortAsc;
-        } else {
-            currentSortCol = col;
-            currentSortAsc = true;
-        }
+        if (currentSortCol === col) { currentSortAsc = !currentSortAsc; } 
+        else { currentSortCol = col; currentSortAsc = true; }
         
-        // Reset semua ikon
         ['Status', 'Bidang', 'Nama_Pembuat', 'Sub_Kegiatan', 'Total_Anggaran'].forEach(function(c) {
             const icon = document.getElementById('sortIcon_' + c);
             if(icon) icon.className = 'fas fa-sort ml-1 text-gray-300';
         });
         
-        // Set ikon aktif
         const activeIcon = document.getElementById('sortIcon_' + col);
-        if(activeIcon) {
-            activeIcon.className = currentSortAsc ? 'fas fa-sort-up ml-1 text-blue-600' : 'fas fa-sort-down ml-1 text-blue-600';
-        }
+        if(activeIcon) activeIcon.className = currentSortAsc ? 'fas fa-sort-up ml-1 text-blue-600' : 'fas fa-sort-down ml-1 text-blue-600';
         
+        currentPage = 1; // Reset halaman ke 1 saat di-sort
         loadData();
     }
 
@@ -2155,7 +2284,6 @@
       const isAdmin = checkIsAdmin();
       const isKabid = (currentLevel === 'Level Bidang' || currentLevel === 'Kepala Bidang');
 
-      // Menggunakan salinan array agar data asli tidak termutasi
       let filtered = allData.slice();
       
       if (!isAdmin && !isKabid) {
@@ -2163,75 +2291,78 @@
       } else if (isKabid) {
           if (currentBidang.includes("Sekretaris")) {
               filtered = filtered.filter(function(d) { 
-                  return d.Bidang === currentBidang || 
-                         d.Bidang === "Sub Bagian Perencanaan" || 
-                         d.Bidang === "Sub Bagian Keuangan dan Aset" || 
-                         d.Bidang === "Sub Bagian Umum Kepegawaian dan Hukum"; 
+                  return d.Bidang === currentBidang || d.Bidang === "Sub Bagian Perencanaan" || d.Bidang === "Sub Bagian Keuangan dan Aset" || d.Bidang === "Sub Bagian Umum Kepegawaian dan Hukum"; 
               });
-          } else {
-              filtered = filtered.filter(function(d) { return d.Bidang === currentBidang; });
-          }
+          } else { filtered = filtered.filter(function(d) { return d.Bidang === currentBidang; }); }
       } else if (isAdmin) {
-          if (listBidangFilter !== 'ALL') {
-              filtered = filtered.filter(function(d) { return d.Bidang === listBidangFilter; });
-          }
+          if (listBidangFilter !== 'ALL') { filtered = filtered.filter(function(d) { return d.Bidang === listBidangFilter; }); }
       }
 
-      // Logika Sorting
+      // Filter Pencarian Universal
+      const searchInputEl = document.getElementById('searchInputList');
+      const searchQuery = searchInputEl ? searchInputEl.value.toLowerCase().trim() : '';
+
+      if (searchQuery) {
+          filtered = filtered.filter(function(d) {
+              const bidang = String(d.Bidang || '').toLowerCase();
+              const pembuat = String(d.Nama_Pembuat || d.Pembuat || '').toLowerCase();
+              const subKeg = String(d.Sub_Kegiatan || '').toLowerCase();
+              const numAnggaran = safeNum(d.Total_Anggaran);
+              const formatAnggaran = formatRp(numAnggaran).toLowerCase();
+              return bidang.includes(searchQuery) || pembuat.includes(searchQuery) || subKeg.includes(searchQuery) || String(numAnggaran).includes(searchQuery) || formatAnggaran.includes(searchQuery);
+          });
+      }
+
+      // Sorting
       if (currentSortCol) {
           filtered.sort(function(a, b) {
-              let valA = a[currentSortCol];
-              let valB = b[currentSortCol];
-              
-              if (currentSortCol === 'Total_Anggaran') {
-                  valA = safeNum(valA);
-                  valB = safeNum(valB);
-              } else {
-                  valA = String(valA || '').toLowerCase();
-                  valB = String(valB || '').toLowerCase();
-              }
-
+              let valA = a[currentSortCol]; let valB = b[currentSortCol];
+              if (currentSortCol === 'Total_Anggaran') { valA = safeNum(valA); valB = safeNum(valB); } 
+              else { valA = String(valA || '').toLowerCase(); valB = String(valB || '').toLowerCase(); }
               if (valA < valB) return currentSortAsc ? -1 : 1;
               if (valA > valB) return currentSortAsc ? 1 : -1;
               return 0;
           });
       }
 
+      // Update Angka Dashboards
       document.getElementById('dashTotalUsulan').innerText = filtered.length;
       document.getElementById('dashTotalAnggaran').innerText = formatRp(filtered.reduce(function(s, i) { return s + safeNum(i.Total_Anggaran); }, 0));
       document.getElementById('dashDisetujui').innerText = filtered.filter(function(x) { return x.Status === 'DISETUJUI'; }).length;
       document.getElementById('dashProses').innerText = filtered.filter(function(x) { return String(x.Status).includes('DIAJUKAN') || String(x.Status).includes('KOREKSI'); }).length;
 
-      try {
-          renderCharts(filtered);
-      } catch (e) {
-          console.error("Gagal memuat grafik: ", e);
-      }
+      try { renderCharts(filtered); } catch (e) {}
 
-      if(filtered.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="p-10 text-center italic text-gray-400">Belum ada data usulan.</td></tr>'; return; }
+      // LOGIKA PAGINATION (Ambil Data 10 per Halaman)
+      const totalItems = filtered.length;
+      const totalPages = Math.ceil(totalItems / itemsPerPage);
+      if (currentPage > totalPages && totalPages > 0) currentPage = totalPages;
       
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const paginatedData = filtered.slice(startIndex, startIndex + itemsPerPage);
+
+      const pageContainer = document.getElementById('paginationContainer');
+
+      if(filtered.length === 0) { 
+          tbody.innerHTML = `<tr><td colspan="6" class="p-10 text-center italic text-gray-400">Tidak ada usulan yang cocok dengan pencarian Anda.</td></tr>`; 
+          if(pageContainer) pageContainer.innerHTML = '';
+          return; 
+      }
+      
+      // Render Tabel dengan data Pagination
       let tableHtml = "";
-      for(let g of filtered) {
+      for(let g of paginatedData) {
         let statLabel = String(g.Status || 'DRAFT');
-        
-        let statColor = 'bg-gray-500 text-white'; // DRAFT
+        let statColor = 'bg-gray-500 text-white'; 
         if(statLabel === 'KOREKSI PROGRAM') statColor = 'status-koreksiprog';
         if(statLabel === 'DIAJUKAN KE BIDANG') statColor = 'status-kebidang';
         if(statLabel === 'KOREKSI BIDANG') statColor = 'status-koreksibid';
         if(statLabel === 'DIAJUKAN KE ADMIN') statColor = 'status-keadmin';
         if(statLabel === 'DISETUJUI') statColor = 'status-disetujui';
         
-        let isEditable = false;
-        if (!isAdmin && !isKabid && (statLabel === 'DRAFT' || statLabel === 'KOREKSI PROGRAM')) isEditable = true;
-        
-        let showReviewBtn = false;
-        if (isKabid && (statLabel === 'DIAJUKAN KE BIDANG' || statLabel === 'KOREKSI BIDANG')) showReviewBtn = true;
-        if (isAdmin && statLabel === 'DIAJUKAN KE ADMIN') showReviewBtn = true;
-        
-        let showDocBtn = '';
-        if ((isAdmin || isKabid) && (g.Link_SuratUsulan || g.Link_KAK || g.Link_DataDukung)) {
-            showDocBtn = `<button onclick="openDocModal('${g.ID_Usulan}')" class="text-blue-500 mr-3 hover:text-blue-700 transition" title="Lihat Dokumen"><i class="fas fa-folder-open fa-lg"></i></button>`;
-        }
+        let isEditable = (!isAdmin && !isKabid && (statLabel === 'DRAFT' || statLabel === 'KOREKSI PROGRAM'));
+        let showReviewBtn = (isKabid && (statLabel === 'DIAJUKAN KE BIDANG' || statLabel === 'KOREKSI BIDANG')) || (isAdmin && statLabel === 'DIAJUKAN KE ADMIN');
+        let showDocBtn = ((isAdmin || isKabid) && (g.Link_SuratUsulan || g.Link_KAK || g.Link_DataDukung)) ? `<button onclick="openDocModal('${g.ID_Usulan}')" class="text-blue-500 mr-3 hover:text-blue-700 transition" title="Lihat Dokumen"><i class="fas fa-folder-open fa-lg"></i></button>` : '';
 
         tableHtml += `
         <tr class="hover:bg-blue-50/50 border-b">
@@ -2241,18 +2372,59 @@
           <td class="px-6 py-4"><button onclick="openRincianView('${g.ID_Usulan}')" class="text-left font-bold text-slate-700 hover:text-blue-600 w-full whitespace-normal block">${g.Sub_Kegiatan || '-'}</button></td>
           <td class="px-6 py-4 text-right font-black text-blue-900">${formatRp(g.Total_Anggaran)}</td>
           <td class="px-6 py-4 text-center whitespace-nowrap">
-            ${isEditable ? `
-              <button onclick="openRincianView('${g.ID_Usulan}')" class="text-blue-500 mr-3" title="Edit Rincian"><i class="fas fa-edit fa-lg"></i></button>
-              <button onclick="openDeleteModal('${g.ID_Usulan}')" class="text-red-500 mr-3" title="Hapus Usulan"><i class="fas fa-trash fa-lg"></i></button>
-            ` : `
-              <button onclick="openRincianView('${g.ID_Usulan}')" class="text-indigo-500 mr-3" title="Lihat Daftar Rincian"><i class="fas fa-list fa-lg"></i></button>
-            `}
-            ${showReviewBtn ? `<button onclick="openVerifikasi('${g.ID_Usulan}')" class="text-green-600 mr-3" title="Review / Verifikasi"><i class="fas fa-check-double fa-lg"></i></button>` : ''}
+            ${isEditable ? `<button onclick="openRincianView('${g.ID_Usulan}')" class="text-blue-500 mr-3"><i class="fas fa-edit fa-lg"></i></button><button onclick="openDeleteModal('${g.ID_Usulan}')" class="text-red-500 mr-3"><i class="fas fa-trash fa-lg"></i></button>` : `<button onclick="openRincianView('${g.ID_Usulan}')" class="text-indigo-500 mr-3"><i class="fas fa-list fa-lg"></i></button>`}
+            ${showReviewBtn ? `<button onclick="openVerifikasi('${g.ID_Usulan}')" class="text-green-600 mr-3"><i class="fas fa-check-double fa-lg"></i></button>` : ''}
             ${showDocBtn}
           </td>
         </tr>`;
       }
       tbody.innerHTML = tableHtml;
+
+      // Panggil fungsi render Pagination UI
+      renderPagination(totalItems, totalPages);
+    }
+
+    // FUNGSI MEMBANGUN TOMBOL PAGINATION
+    function renderPagination(totalItems, totalPages) {
+        const container = document.getElementById('paginationContainer');
+        if (!container) return;
+
+        if (totalPages <= 1) {
+            container.innerHTML = `<span class="text-gray-500 font-medium">Menampilkan ${totalItems} data</span>`;
+            return;
+        }
+
+        let startRange = ((currentPage - 1) * itemsPerPage) + 1;
+        let endRange = Math.min(currentPage * itemsPerPage, totalItems);
+
+        let html = `<span class="text-gray-500 font-medium mb-3 md:mb-0">Menampilkan <b>${startRange} - ${endRange}</b> dari <b>${totalItems}</b> usulan</span>`;
+        html += `<div class="flex items-center space-x-1">`;
+        
+        // Tombol Prev
+        html += `<button onclick="changePage(${currentPage - 1})" class="px-3 py-1.5 rounded-lg border text-xs font-bold transition ${currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200' : 'bg-white text-blue-600 hover:bg-blue-50 border-gray-300'}" ${currentPage === 1 ? 'disabled' : ''}>&laquo; Prev</button>`;
+        
+        let prevDot = false;
+        for (let i = 1; i <= totalPages; i++) {
+            // Tampilkan halaman pertama, terakhir, dan yang ada di sekitar current page
+            if (i === 1 || i === totalPages || Math.abs(i - currentPage) <= 1) {
+                html += `<button onclick="changePage(${i})" class="px-3 py-1.5 rounded-lg border text-xs transition ${currentPage === i ? 'bg-blue-600 text-white font-bold border-blue-600' : 'bg-white text-gray-600 font-bold hover:bg-blue-50 border-gray-300'}">${i}</button>`;
+                prevDot = false;
+            } else {
+                if (!prevDot) { html += `<span class="px-2 text-gray-400">...</span>`; prevDot = true; }
+            }
+        }
+
+        // Tombol Next
+        html += `<button onclick="changePage(${currentPage + 1})" class="px-3 py-1.5 rounded-lg border text-xs font-bold transition ${currentPage === totalPages ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200' : 'bg-white text-blue-600 hover:bg-blue-50 border-gray-300'}" ${currentPage === totalPages ? 'disabled' : ''}>Next &raquo;</button>`;
+        html += `</div>`;
+        
+        container.innerHTML = html;
+    }
+
+    // FUNGSI KLIK GANTI HALAMAN
+    function changePage(pageNumber) {
+        currentPage = pageNumber;
+        loadData();
     }
 
     function refreshAllData() {
@@ -2298,10 +2470,10 @@
         });
 
         if (belumUpload.length > 0) { 
-            return showModalNotif("Akses Ditolak", "Semua usulan wajib dilampirkan Surat Permohonan dan TOR/KAK. Silakan ke menu Dokumen Bidang untuk mengunggahnya terlebih dahulu."); 
+            return showModalNotif("Akses Ditolak", "Semua usulan wajib dilampirkan Surat Permohonan dan TOR/KAK. Silakan ke menu Upload Dokumen untuk mengunggahnya terlebih dahulu."); 
         }
 
-        document.getElementById('kirimModalText').innerText = `Kirim ${drafts.length} usulan ke Kepala Bidang untuk diverifikasi?`;
+        document.getElementById('kirimModalText').innerText = `Kirim ${drafts.length} usulan untuk diverifikasi?`;
         document.getElementById('kirimModal').style.display = 'flex';
     }
 
@@ -2314,7 +2486,7 @@
         drafts.forEach(function(d) {
             google.script.run.withSuccessHandler(function() {
                 processed++;
-                if (processed === drafts.length) { showToast("Usulan berhasil dikirim ke Kepala Bidang!"); refreshAllData(); }
+                if (processed === drafts.length) { showToast("Usulan berhasil dikirim!"); refreshAllData(); }
             }).updateStatusUsulan(d.ID_Usulan, 'DIAJUKAN KE BIDANG');
         });
     }
@@ -2375,7 +2547,34 @@
         let html = '';
         const groupedVerif = {};
         
-        verifikasiItems.forEach(function(it, originalIdx) {
+        // 1. Amankan indeks asli
+        let verifToRender = verifikasiItems.map(function(it, index) {
+            return { data: it, originalIndex: index };
+        });
+
+        // 2. Baca input pencarian
+        const searchInputVerif = document.getElementById('searchInputVerifikasi');
+        const searchQ = searchInputVerif ? searchInputVerif.value.toLowerCase().trim() : '';
+
+        // 3. Filter data
+        if (searchQ !== "") {
+            verifToRender = verifToRender.filter(function(item) {
+                const komp = String(item.data.Komponen || '').toLowerCase();
+                const spek = String(item.data.Spesifikasi || '').toLowerCase();
+                const rek = String(item.data.Kode_Rekening || '').toLowerCase();
+                return komp.includes(searchQ) || spek.includes(searchQ) || rek.includes(searchQ);
+            });
+        }
+
+        if (verifToRender.length === 0) {
+            document.getElementById('verifTableBody').innerHTML = `<tr><td colspan="5" class="p-8 text-center text-gray-400 italic font-medium">Data "${searchQ}" tidak ditemukan.</td></tr>`;
+            return;
+        }
+
+        verifToRender.forEach(function(item) {
+            let it = item.data;
+            let originalIdx = item.originalIndex;
+            
             let keyKet = (it.Sumber_Dana || "Tanpa Dana") + "|||" + (it.Keterangan || "Tanpa Keterangan");
             let keyRek = it.Kode_Rekening || "Tanpa Rekening";
             
@@ -2673,13 +2872,37 @@
        if (isAdmin) {
            if(adminControl) { adminControl.style.display = 'flex'; }
            if(bidangControl) { bidangControl.style.display = 'none'; }
+           
            const selectBidang = document.getElementById('selectRabBidang');
            if (selectBidang && selectBidang.options.length <= 1) { 
               bidangList.forEach(function(b) { 
                   if (b.includes("Sekretaris Dinas Kesehatan, Pengendalian Penduduk dan Keluarga Berencana")) return; // Abaikan Sekretaris
                   selectBidang.add(new Option(b, b)); 
               }); 
+              
+              // [BARU] AKTIFKAN PENCARIAN (TOM SELECT) UNTUK UNIT KERJA
+              if (!window.tsRabBidang) {
+                  window.tsRabBidang = new TomSelect(selectBidang, {
+                      placeholder: "Pilih Unit Kerja...",
+                      allowEmptyOption: true
+                  });
+              }
             }
+            
+           const selectSubKegiatan = document.getElementById('selectRabSubKegiatan');
+           if (selectSubKegiatan && selectSubKegiatan.options.length <= 1 && globalSubKegiatan.length > 0) { 
+              globalSubKegiatan.forEach(function(sk) { 
+                  selectSubKegiatan.add(new Option(sk.Nama_SubKegiatan, sk.Nama_SubKegiatan)); 
+              }); 
+              
+              // [BARU] AKTIFKAN PENCARIAN (TOM SELECT) UNTUK SUB KEGIATAN
+              if (!window.tsRabSubKegiatan) {
+                  window.tsRabSubKegiatan = new TomSelect(selectSubKegiatan, {
+                      placeholder: "Pilih Sub Kegiatan...",
+                      allowEmptyOption: true
+                  });
+              }
+           }
        } else {
            if(adminControl) { adminControl.style.display = 'none'; }
            if(bidangControl) { bidangControl.style.display = 'flex'; }
@@ -2687,6 +2910,10 @@
        
        const selBidangEl = document.getElementById('selectRabBidang');
        const selectedBidang = isAdmin ? (selBidangEl ? selBidangEl.value : 'ALL') : currentBidang;
+       
+       // [BARU] MEMBACA PILIHAN FILTER SUB KEGIATAN
+       const selSubKegEl = document.getElementById('selectRabSubKegiatan');
+       const selectedSubKeg = isAdmin ? (selSubKegEl ? selSubKegEl.value : 'ALL') : 'ALL';
        
        // HANYA AMBIL DATA YANG STATUSNYA "DISETUJUI" SAJA (Disesuaikan untuk Kabid)
        const validHeaders = allData.filter(function(d) {
@@ -2703,6 +2930,11 @@
          }
 
          if (!isFinal) return false;
+
+         // [BARU] FILTER KHUSUS SUB KEGIATAN (ADMIN)
+         if (selectedSubKeg !== 'ALL' && d.Sub_Kegiatan !== selectedSubKeg) {
+             return false;
+         }
 
          if (isAdmin) {
              const isNotAdmin = d.Bidang !== 'Admin Verifikator';
@@ -2761,7 +2993,12 @@
        if (isAdmin && selectedBidang === 'ALL') {
            document.getElementById('rabUnitKerjaDisplay').innerText = "DINAS KESEHATAN, PENGENDALIAN PENDUDUK DAN KELUARGA BERENCANA";
        } else {
-           document.getElementById('rabUnitKerjaDisplay').innerText = `${unitKerjaText.toUpperCase()}`; 
+           let displayUnitKerja = unitKerjaText.toUpperCase();
+           // Ubah kata "Sekretaris" menjadi "Sekretariat" khusus untuk judul
+           if (displayUnitKerja === "SEKRETARIS DINAS KESEHATAN, PENGENDALIAN PENDUDUK DAN KELUARGA BERENCANA") {
+               displayUnitKerja = "SEKRETARIAT DINAS KESEHATAN, PENGENDALIAN PENDUDUK DAN KELUARGA BERENCANA";
+           }
+           document.getElementById('rabUnitKerjaDisplay').innerText = displayUnitKerja; 
        }
        
        // Logika cerdas untuk menentukan label jabatan di tanda tangan
