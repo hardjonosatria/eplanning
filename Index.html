@@ -99,6 +99,28 @@
       animation: spin 1s linear infinite;
     }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* ====================================================
+       TRIK ZOOM 80% ANTI-TERPOTONG (REVISI FINAL)
+       ==================================================== */
+    @media (min-width: 768px) {
+      body {
+        zoom: 80%;
+      }
+      /* Samarkan warna dasar layar agar tidak ada garis sisa */
+      html {
+        background-color: #F8FAFC; 
+      }
+      /* HANYA tarik Tinggi (Height) menjadi 125%, biarkan lebar normal! */
+      .h-screen { 
+        height: 125vh !important; 
+      }
+      .inset-0 { 
+        height: 125vh !important; 
+        bottom: auto !important; 
+      }
+    }
+
   </style>
 </head>
 <body class="flex flex-col h-screen overflow-hidden text-gray-800 antialiased bg-gray-50">
@@ -544,8 +566,6 @@
                  </table>
                </div>
             </div>
-            <div id="paginationRincianContainer" class="p-4 border-t border-gray-100 flex flex-col md:flex-row items-center justify-between bg-white text-xs gap-4 rounded-b-xl">
-            </div>
 
             <!-- Tombol Simpan Final -->
             <div class="flex justify-end pt-4" id="rincianSaveWrapper">
@@ -879,6 +899,18 @@
       <div class="flex justify-end mt-8 space-x-3">
         <button onclick="closeUserModal()" class="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-bold hover:bg-gray-200">Batal</button>
         <button onclick="submitUser()" class="px-5 py-2.5 bg-purple-600 text-white rounded-lg text-sm font-bold hover:bg-purple-700 shadow-sm">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="koreksiModal" class="fixed inset-0 bg-gray-900 bg-opacity-60 z-modal items-center justify-center px-4 no-print" style="backdrop-filter: blur(6px); display: none;">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 text-center">
+      <div class="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-5 text-red-500 border-4 border-white"><i class="fas fa-undo fa-3x"></i></div>
+      <h3 class="text-2xl font-bold text-gray-800 mb-2">Kembalikan Usulan?</h3>
+      <p class="text-gray-500 mb-8 font-medium text-sm" id="koreksiModalText">Kembalikan usulan ini untuk direvisi?</p>
+      <div class="flex justify-center space-x-4">
+        <button onclick="closeKoreksiModal()" class="px-6 py-3 bg-white border-2 border-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-50 w-full transition">Batal</button>
+        <button onclick="executeKoreksiUsulan()" id="btnConfirmKoreksi" class="px-6 py-3 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 w-full transition">Ya, Kembalikan</button>
       </div>
     </div>
   </div>
@@ -2731,6 +2763,54 @@
         }).approveUsulanOlehAdmin(currentVerifikasiId, namaKadis, nipKadis, linkTtdKadis);
     }
 
+    // =====================================
+    // FUNGSI KEMBALIKAN / KOREKSI USULAN
+    // =====================================
+    let pendingPenolakanStatus = "";
+
+    function closeKoreksiModal() { 
+        document.getElementById('koreksiModal').style.display = 'none'; 
+    }
+
+    function executeKoreksiUsulan() {
+        const btn = document.getElementById('btnConfirmKoreksi');
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Memproses...';
+        
+        const loaderIcon = document.getElementById('globalLoader');
+        if(loaderIcon) loaderIcon.style.display = 'flex';
+
+        // 1. Ubah status induk usulan menjadi KOREKSI PROGRAM / KOREKSI BIDANG
+        google.script.run.withSuccessHandler(function() {
+            
+            // 2. Simpan setiap catatan dari admin/kabid ke masing-masing rincian item
+            let savedItems = 0;
+            if (verifikasiItems.length === 0) {
+                 if(loaderIcon) loaderIcon.style.display = 'none';
+                 showToast("Usulan berhasil dikembalikan untuk dikoreksi!");
+                 closeKoreksiModal(); refreshAllData(); switchView('listView');
+                 btn.disabled = false; btn.innerHTML = 'Ya, Kembalikan';
+                 return;
+            }
+            
+            verifikasiItems.forEach(function(item) {
+                google.script.run.withSuccessHandler(function() {
+                    savedItems++;
+                    if(savedItems === verifikasiItems.length) {
+                        if(loaderIcon) loaderIcon.style.display = 'none';
+                        showToast("Usulan berhasil dikembalikan beserta catatannya!");
+                        closeKoreksiModal(); refreshAllData(); switchView('listView');
+                        btn.disabled = false; btn.innerHTML = 'Ya, Kembalikan';
+                    }
+                }).saveRincian(item);
+            });
+            
+        }).withFailureHandler(function(err) {
+            if(loaderIcon) loaderIcon.style.display = 'none';
+            showToast("Gagal memproses: " + err.message, "error");
+            btn.disabled = false; btn.innerHTML = 'Ya, Kembalikan';
+        }).updateStatusUsulan(currentVerifikasiId, pendingPenolakanStatus);
+    }
+
     // 3. FUNGSI UTAMA PENYIMPANAN VERIFIKASI
     function simpanHasilVerifikasi(isSetuju) {
         const isAdmin = checkIsAdmin();
@@ -2972,16 +3052,22 @@
 
        // KUNCI 2: Logika Tombol & Banner untuk Kabid dan Level Program
        if (isKabid) {
-           // KHUSUS KABID: Tombol HILANG, Banner Muncul jika ada yang belum disetujui
-           if (btnExportBidang) btnExportBidang.style.display = 'none';
-           if (btnPrintBidang) btnPrintBidang.style.display = 'none';
-           if (activeUnapproved && warningBanner) { warningBanner.style.display = 'flex'; }
+           // KHUSUS KABID: Tombol TETAP AKTIF, Banner Muncul sebagai info saja jika ada yang belum disetujui
+           if (activeUnapproved && warningBanner) { 
+               warningBanner.style.display = 'flex'; 
+               let pEl = warningBanner.querySelector('p');
+               if(pEl) pEl.innerHTML = "<strong>Perhatian:</strong> Masih terdapat usulan yang belum berstatus <b>DISETUJUI</b>. Namun Anda tetap dapat mencetak dokumen RAB ini.";
+           }
        } else if (!isAdmin) {
            // KHUSUS LEVEL PROGRAM: Tombol redup (disabled), Banner Muncul jika belum disetujui
            if (!canPrint) {
                if (btnExportBidang) { btnExportBidang.disabled = true; btnExportBidang.classList.add('opacity-50', 'cursor-not-allowed'); }
                if (btnPrintBidang) { btnPrintBidang.disabled = true; btnPrintBidang.classList.add('opacity-50', 'cursor-not-allowed'); }
-               if (warningBanner) { warningBanner.style.display = 'flex'; }
+               if (warningBanner) { 
+                   warningBanner.style.display = 'flex'; 
+                   let pEl = warningBanner.querySelector('p');
+                   if(pEl) pEl.innerHTML = "<strong>Perhatian:</strong> Terdapat usulan yang belum berstatus <b>DISETUJUI</b> oleh Admin. Dokumen RAB belum dapat dicetak/diunduh.";
+               }
            }
        }
        
@@ -3001,73 +3087,77 @@
            document.getElementById('rabUnitKerjaDisplay').innerText = displayUnitKerja; 
        }
        
-       // Logika cerdas untuk menentukan label jabatan di tanda tangan
+       // --- 1. TENTUKAN LABEL JABATAN TERLEBIH DAHULU ---
        let jabatanTtd = "KEPALA " + unitKerjaText.toUpperCase();
        let ukUpper = unitKerjaText.toUpperCase();
        
-       // Jika unit kerjanya Sub Bagian Perencanaan, Keuangan, Kepegawaian, ATAU Sekretaris, maka yang TTD adalah Sekretaris Dinas Kesehatan
-       if (ukUpper === "SUB BAGIAN PERENCANAAN" || 
-           ukUpper === "SUB BAGIAN KEUANGAN DAN ASET" || 
-           ukUpper === "SUB BAGIAN UMUM KEPEGAWAIAN DAN HUKUM" || 
-           ukUpper === "SEKRETARIS DINAS KESEHATAN, PENGENDALIAN PENDUDUK DAN KELUARGA BERENCANA") {
-           
+       // Kelompokkan Sekretaris dan semua Sub Bagiannya agar saling berbagi TTD
+       const isSekretariatGroup = ukUpper === "SUB BAGIAN PERENCANAAN" || 
+                                  ukUpper === "SUB BAGIAN KEUANGAN DAN ASET" || 
+                                  ukUpper === "SUB BAGIAN UMUM KEPEGAWAIAN DAN HUKUM" || 
+                                  ukUpper.includes("SEKRETARIS");
+
+       if (isAdmin && selectedBidang === 'ALL') {
+           jabatanTtd = "KEPALA DINAS KESEHATAN, PENGENDALIAN PENDUDUK DAN KELUARGA BERENCANA";
+       } else if (isSekretariatGroup) {
            jabatanTtd = "SEKRETARIS DINAS KESEHATAN, PENGENDALIAN PENDUDUK DAN KELUARGA BERENCANA";
        }
        
        document.getElementById('rabTtdJabatan').innerText = jabatanTtd;
-       
+       const sigBlock = document.getElementById('rabSignatureBlock');
+       if (sigBlock) sigBlock.style.display = 'flex'; // Selalu tampilkan blok TTD
+
+       // --- 2. CEK TABEL KOSONG ATAU TIDAK BERDASARKAN FILTER SUB KEGIATAN ---
        if (validHeaders.length === 0) { 
            let emptyMsg = isAdmin ? 'Belum ada data usulan yang Diajukan ke Admin / Disetujui.' : 'Belum ada usulan pada Bidang/Unit Kerja ini.';
            body.innerHTML = `<tr><td colspan="16" style="padding:10px; text-align:center; font-style:italic; color:gray; border: 1px solid #000;">${emptyMsg}</td></tr>`; 
            document.getElementById('rabGrandTotal').innerText = formatRp(0);
+           // Jika tabel kosong, kosongkan area TTD
            document.getElementById('rabTtdNama').innerText = "NAMA PEJABAT TERKAIT";
            document.getElementById('rabTtdNip').innerText = "........................................";
            document.getElementById('rabTtdImageContainer').innerHTML = "<br><br><br>";
-           return; 
+           return; // Hentikan fungsi di sini
        }
 
-       // --- PENGATURAN BLOK TANDA TANGAN (KADIS & KABID) ---
-       const sigBlock = document.getElementById('rabSignatureBlock');
-       if (sigBlock) sigBlock.style.display = 'flex'; // Selalu tampilkan blok TTD
-
+       // --- 3. JIKA TABEL ADA ISINYA, TARIK TTD DARI UNIT KERJA (ALL DATA) ---
        if (isAdmin && selectedBidang === 'ALL') {
-           // 1. TTD KEPALA DINAS UNTUK KOMPILASI "SEMUA UNIT KERJA"
-           document.getElementById('rabTtdJabatan').innerText = "KEPALA DINAS KESEHATAN, PENGENDALIAN PENDUDUK DAN KELUARGA BERENCANA";
+           // TTD KEPALA DINAS UNTUK KOMPILASI
            document.getElementById('rabTtdNama').innerText = "NAMA KEPALA DINAS";
            document.getElementById('rabTtdNip').innerText = "........................................";
            document.getElementById('rabTtdImageContainer').innerHTML = "<br><br><br>";
 
-           // Cari usulan yang sudah memiliki TTD Kadis (Link_TTD_Kadis)
-           const headerWithKadis = validHeaders.find(function(h) { return h.Link_TTD_Kadis && String(h.Link_TTD_Kadis).trim() !== ""; });
+           // Cari TTD Kadis dari seluruh data (allData)
+           const headerWithKadis = allData.find(function(h) { return h.Nama_Kadis && String(h.Nama_Kadis).trim() !== ""; });
            if (headerWithKadis) {
-               document.getElementById('rabTtdNama').innerText = headerWithKadis.Nama_Kadis || "NAMA KEPALA DINAS";
-               document.getElementById('rabTtdNip').innerText = headerWithKadis.NIP_Kadis || "........................................";
-               
+               document.getElementById('rabTtdNama').innerText = headerWithKadis.Nama_Kadis;
+               document.getElementById('rabTtdNip').innerText = headerWithKadis.NIP_Kadis ? "NIP. " + headerWithKadis.NIP_Kadis : "";
                if (headerWithKadis.Link_TTD_Kadis === "TTD_ELEKTRONIK") {
-                   document.getElementById('rabTtdImageContainer').innerHTML = `
-                    <div style="border: 2px solid #3b82f6; border-radius: 8px; padding: 10px; color: #1e3a8a; background-color: #eff6ff; display: inline-block;">
-                        <b>Disetujui Secara Elektronik</b><br><span style="font-size: 10px;">Oleh Kepala Dinas</span>
-                    </div>`;
+                   document.getElementById('rabTtdImageContainer').innerHTML = `<div style="border: 2px solid #3b82f6; border-radius: 8px; padding: 10px; color: #1e3a8a; background-color: #eff6ff; display: inline-block;"><b>Disetujui Secara Elektronik</b><br><span style="font-size: 10px;">Oleh Kepala Dinas</span></div>`;
                }
            }
        } else {
-           // 2. TTD KABID UNTUK PER BIDANG / SUB BAGIAN
+           // TTD KABID / KAPUS / SEKRETARIS UNTUK PER BIDANG
            document.getElementById('rabTtdNama').innerText = "NAMA PEJABAT TERKAIT";
            document.getElementById('rabTtdNip').innerText = "........................................";
            document.getElementById('rabTtdImageContainer').innerHTML = "<br><br><br>";
 
-           const headerWithTtd = validHeaders.find(function(h) { return h.Link_TTD && String(h.Link_TTD).trim() !== ""; });
+           const activeBidang = isAdmin ? selectedBidang : currentBidang;
+           
+           // Cari TTD dari seluruh data (allData) berdasarkan Unit Kerja
+           const headerWithTtd = allData.find(function(h) { 
+               let matchBidang = h.Bidang === activeBidang;
+               if (isSekretariatGroup) {
+                   matchBidang = h.Bidang.includes("Sekretaris") || h.Bidang.includes("Sub Bagian");
+               }
+               return matchBidang && h.Nama_Kabid && String(h.Nama_Kabid).trim() !== ""; 
+           });
+
            if (headerWithTtd) {
-               document.getElementById('rabTtdNama').innerText = headerWithTtd.Nama_Kabid || "NAMA PEJABAT TERKAIT";
-               document.getElementById('rabTtdNip').innerText = headerWithTtd.NIP_Kabid || "........................................";
-               
+               document.getElementById('rabTtdNama').innerText = headerWithTtd.Nama_Kabid;
+               document.getElementById('rabTtdNip').innerText = headerWithTtd.NIP_Kabid ? "NIP. " + headerWithTtd.NIP_Kabid : "";
                if (headerWithTtd.Link_TTD === "TTD_ELEKTRONIK") {
-                   document.getElementById('rabTtdImageContainer').innerHTML = `
-                    <div style="border: 2px solid #3b82f6; border-radius: 8px; padding: 10px; color: #1e3a8a; background-color: #eff6ff; display: inline-block;">
-                        <b>Disetujui Secara Elektronik</b>
-                    </div>`;
-               } else {
-                   // Fallback jika ada gambar lama
+                   document.getElementById('rabTtdImageContainer').innerHTML = `<div style="border: 2px solid #3b82f6; border-radius: 8px; padding: 10px; color: #1e3a8a; background-color: #eff6ff; display: inline-block;"><b>Disetujui Secara Elektronik</b></div>`;
+               } else if (headerWithTtd.Link_TTD && String(headerWithTtd.Link_TTD).trim() !== "") {
                    document.getElementById('rabTtdImageContainer').innerHTML = `<img src="${headerWithTtd.Link_TTD}" alt="TTD" style="height: 60px; object-fit: contain; margin: 0 auto;">`;
                }
            }
