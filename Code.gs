@@ -150,7 +150,7 @@ function setupDatabase() {
   const schemas = {
     [SHEET_USER]: ["Username", "Nama", "Password", "Level_Akses", "Bidang"],
     [SHEET_PENGATURAN]: ["Parameter (Key)", "Nilai (Value)"],
-    [SHEET_USULAN]: ["ID_Usulan", "Bidang", "Pembuat", "Sub_Kegiatan", "Indikator", "Target", "Total_Anggaran", "Status", "Link_KAK", "Link_DataDukung", "Nama_Kabid", "NIP_Kabid", "Link_TTD"],
+    [SHEET_USULAN]: ["ID_Usulan", "Bidang", "Pembuat", "Sub_Kegiatan", "Indikator", "Target", "Total_Anggaran", "Status", "Pembuat", "Link_SuratUsulan", "Link_KAK", "Link_DataDukung", "Nama_Kabid", "NIP_Kabid", "Link_TTD", "Nama_Kadis", "NIP_Kadis", "Link_TTD_Kadis"],
     [SHEET_RINCIAN]: ["ID_Usulan", "ID_Rincian", "Kode_Rekening", "Sumber_Dana", "Komponen", "Spesifikasi", "Keterangan", "Koefisien", "Volume", "Harga_Satuan", "Sub_Total", "Status_Item", "Catatan"],
     [SHEET_REKENING]: ["Kode_Rekening", "Nama_Rekening"],
     [SHEET_SUBKEG]: ["Kode_SubKegiatan", "Nama_SubKegiatan", "Indikator", "Satuan"],
